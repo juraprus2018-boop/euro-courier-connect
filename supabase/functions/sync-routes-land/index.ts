@@ -11,12 +11,70 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
-  const { landId } = await req.json();
+  const { landId, action } = await req.json();
   
   const supabase = createClient(
     Deno.env.get('SUPABASE_URL')!,
     Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
   );
+
+  // Handle stop action
+  if (action === 'stop') {
+    console.log(`Stopping sync for land: ${landId}`);
+    await supabase.from('landen').update({ 
+      sync_routes_status: 'stopped',
+      sync_routes_last_message: 'Sync gestopt door gebruiker'
+    }).eq('id', landId);
+    
+    return new Response(JSON.stringify({ success: true, message: 'Sync gestopt' }), {
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
+  }
+
+  // Handle clear routes action
+  if (action === 'clear') {
+    console.log(`Clearing all routes for land: ${landId}`);
+    
+    // Get all buitenland_steden for this land
+    const { data: steden } = await supabase
+      .from('buitenland_steden')
+      .select('id')
+      .eq('land_id', landId);
+    
+    if (steden && steden.length > 0) {
+      const stadIds = steden.map(s => s.id);
+      
+      const { error: deleteError, count } = await supabase
+        .from('routes')
+        .delete({ count: 'exact' })
+        .in('buitenland_stad_id', stadIds);
+      
+      if (deleteError) {
+        console.error('Error deleting routes:', deleteError);
+        return new Response(JSON.stringify({ error: 'Fout bij verwijderen routes' }), { 
+          status: 500, 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        });
+      }
+      
+      // Reset sync status
+      await supabase.from('landen').update({ 
+        sync_routes_status: 'idle',
+        sync_routes_progress: 0,
+        sync_routes_total: 0,
+        sync_routes_last_message: `${count || 0} routes verwijderd`
+      }).eq('id', landId);
+      
+      console.log(`Deleted ${count} routes for land ${landId}`);
+      return new Response(JSON.stringify({ success: true, deleted: count, message: `${count || 0} routes verwijderd` }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+    
+    return new Response(JSON.stringify({ success: true, deleted: 0, message: 'Geen routes om te verwijderen' }), {
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
+  }
 
   console.log(`Starting sync routes for land: ${landId}`);
 
@@ -101,6 +159,34 @@ serve(async (req) => {
   let progress = 0;
 
   for (const stad of steden || []) {
+    // Check if sync was stopped
+    const { data: currentLand } = await supabase
+      .from('landen')
+      .select('sync_routes_status')
+      .eq('id', landId)
+      .single();
+    
+    if (currentLand?.sync_routes_status === 'stopped') {
+      console.log('Sync stopped by user');
+      const message = `Gestopt: ${generated} nieuwe routes, ${skipped} al bestaand, ${errors} fouten`;
+      await supabase.from('landen').update({ 
+        sync_routes_progress: progress,
+        sync_routes_last_run: new Date().toISOString(),
+        sync_routes_last_message: message
+      }).eq('id', landId);
+      
+      return new Response(JSON.stringify({ 
+        success: true, 
+        stopped: true,
+        generated, 
+        skipped, 
+        errors,
+        message 
+      }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
     for (const plaats of nlPlaatsen || []) {
       progress++;
 

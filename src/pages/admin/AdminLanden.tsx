@@ -13,7 +13,7 @@ import { Progress } from '@/components/ui/progress';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { slugify } from '@/lib/slugify';
-import { Plus, Loader2, Pencil, Trash2, MapPin, RefreshCw, Check, AlertCircle } from 'lucide-react';
+import { Plus, Loader2, Pencil, Trash2, MapPin, RefreshCw, Check, AlertCircle, Square, XCircle } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { nl } from 'date-fns/locale';
 
@@ -184,6 +184,47 @@ const AdminLanden = () => {
       toast({ title: 'Fout bij synchroniseren routes', variant: 'destructive' });
     } finally {
       setSyncing(null);
+    }
+  };
+
+  const stopSync = async (landId: string) => {
+    try {
+      const { data, error } = await supabase.functions.invoke('sync-routes-land', {
+        body: { landId, action: 'stop' }
+      });
+
+      if (error) throw error;
+      toast({ title: data.message || 'Sync gestopt' });
+      fetchLanden();
+    } catch (error) {
+      console.error('Stop sync error:', error);
+      toast({ title: 'Fout bij stoppen sync', variant: 'destructive' });
+    }
+  };
+
+  const clearRoutes = async (landId: string, landNaam: string) => {
+    if (!confirm(`Weet je zeker dat je ALLE routes voor ${landNaam} wilt verwijderen? Dit kan niet ongedaan worden gemaakt.`)) {
+      return;
+    }
+
+    toast({ title: `Routes verwijderen voor ${landNaam}...` });
+
+    try {
+      const { data, error } = await supabase.functions.invoke('sync-routes-land', {
+        body: { landId, action: 'clear' }
+      });
+
+      if (error) throw error;
+
+      if (data.success) {
+        toast({ title: data.message });
+        fetchLanden();
+      } else {
+        toast({ title: data.error || 'Verwijderen mislukt', variant: 'destructive' });
+      }
+    } catch (error) {
+      console.error('Clear routes error:', error);
+      toast({ title: 'Fout bij verwijderen routes', variant: 'destructive' });
     }
   };
 
@@ -421,10 +462,22 @@ const AdminLanden = () => {
                                 {land.sync_routes_enabled ? 'Aan' : 'Uit'}
                               </span>
                               {isRunning && (
-                                <Loader2 className="h-4 w-4 animate-spin text-primary ml-auto" />
+                                <Button 
+                                  variant="ghost" 
+                                  size="sm" 
+                                  className="h-6 px-2 text-destructive hover:text-destructive ml-auto"
+                                  onClick={() => stopSync(land.id)}
+                                  title="Stop sync"
+                                >
+                                  <Square className="h-3 w-3 mr-1" />
+                                  Stop
+                                </Button>
                               )}
                               {land.sync_routes_status === 'completed' && (
                                 <Check className="h-4 w-4 text-success ml-auto" />
+                              )}
+                              {land.sync_routes_status === 'stopped' && (
+                                <AlertCircle className="h-4 w-4 text-warning ml-auto" />
                               )}
                             </div>
                             
@@ -488,6 +541,15 @@ const AdminLanden = () => {
                             </Button>
                             <Button variant="ghost" size="icon" onClick={() => handleDelete(land.id)}>
                               <Trash2 className="h-4 w-4 text-destructive" />
+                            </Button>
+                            <Button 
+                              variant="ghost" 
+                              size="icon" 
+                              onClick={() => clearRoutes(land.id, land.naam)}
+                              disabled={isRunning}
+                              title="Alle routes legen"
+                            >
+                              <XCircle className="h-4 w-4 text-destructive" />
                             </Button>
                           </div>
                         </TableCell>
