@@ -4,16 +4,20 @@ import { Button } from '@/components/ui/button';
 
 interface HeroSectionProps {
   landNaam?: string;
+  heroTitel?: string | null;
+  heroSubtitel?: string | null;
 }
 
-export function HeroSection({ landNaam }: HeroSectionProps) {
-  const title = landNaam 
-    ? `Koerier naar ${landNaam}` 
-    : 'Betrouwbare Koeriersdiensten';
+export function HeroSection({ landNaam, heroTitel, heroSubtitel }: HeroSectionProps) {
+  const siteNaam = landNaam ? `De ${landNaam} Koerier` : 'De Europa Koerier';
   
-  const subtitle = landNaam
+  const title = heroTitel || (landNaam 
+    ? `Koerier naar ${landNaam}` 
+    : 'Betrouwbare Koeriersdiensten');
+  
+  const subtitle = heroSubtitel || (landNaam
     ? `Dagelijkse koeriersdienst van Nederland naar ${landNaam}. Snel, veilig en betaalbaar.`
-    : 'Professioneel transport van Nederland naar heel Europa. Dagelijks op pad voor uw zendingen.';
+    : 'Professioneel transport van Nederland naar heel Europa. Dagelijks op pad voor uw zendingen.');
 
   return (
     <section className="relative overflow-hidden bg-gradient-dark py-20 lg:py-32">
@@ -21,6 +25,11 @@ export function HeroSection({ landNaam }: HeroSectionProps) {
       
       <div className="container relative">
         <div className="mx-auto max-w-3xl text-center">
+          {/* Site branding */}
+          <p className="text-accent font-display font-semibold mb-4 animate-fade-in">
+            {siteNaam}
+          </p>
+          
           <h1 className="font-display text-4xl font-bold tracking-tight text-primary-foreground sm:text-5xl lg:text-6xl animate-fade-in">
             {title}
           </h1>
@@ -36,7 +45,7 @@ export function HeroSection({ landNaam }: HeroSectionProps) {
               </Link>
             </Button>
             <Button size="lg" variant="outline" className="border-primary-foreground/20 text-primary-foreground hover:bg-primary-foreground/10" asChild>
-              <Link to="/routes">Bekijk routes</Link>
+              <Link to="/bestemmingen">Bekijk bestemmingen</Link>
             </Button>
           </div>
         </div>
@@ -47,8 +56,12 @@ export function HeroSection({ landNaam }: HeroSectionProps) {
               <Truck className="h-6 w-6 text-accent-foreground" />
             </div>
             <div>
-              <h3 className="font-display font-semibold text-primary-foreground">Dagelijks op pad</h3>
-              <p className="text-sm text-primary-foreground/70">Vaste routes door Europa</p>
+              <h3 className="font-display font-semibold text-primary-foreground">
+                {landNaam ? `Direct naar ${landNaam}` : 'Dagelijks op pad'}
+              </h3>
+              <p className="text-sm text-primary-foreground/70">
+                {landNaam ? 'Meerdere ritten per week' : 'Vaste routes door Europa'}
+              </p>
             </div>
           </div>
 

@@ -210,9 +210,17 @@ export type Database = {
           actief: boolean
           created_at: string
           domein: string | null
+          faq: Json | null
+          hero_afbeelding_url: string | null
+          hero_subtitel: string | null
+          hero_titel: string | null
           id: string
           km_tarief: number
+          meta_description: string | null
+          meta_title: string | null
           naam: string
+          primary_color: string | null
+          secondary_color: string | null
           slug: string
           sync_routes_enabled: boolean
           sync_routes_last_message: string | null
@@ -226,9 +234,17 @@ export type Database = {
           actief?: boolean
           created_at?: string
           domein?: string | null
+          faq?: Json | null
+          hero_afbeelding_url?: string | null
+          hero_subtitel?: string | null
+          hero_titel?: string | null
           id?: string
           km_tarief?: number
+          meta_description?: string | null
+          meta_title?: string | null
           naam: string
+          primary_color?: string | null
+          secondary_color?: string | null
           slug: string
           sync_routes_enabled?: boolean
           sync_routes_last_message?: string | null
@@ -242,9 +258,17 @@ export type Database = {
           actief?: boolean
           created_at?: string
           domein?: string | null
+          faq?: Json | null
+          hero_afbeelding_url?: string | null
+          hero_subtitel?: string | null
+          hero_titel?: string | null
           id?: string
           km_tarief?: number
+          meta_description?: string | null
+          meta_title?: string | null
           naam?: string
+          primary_color?: string | null
+          secondary_color?: string | null
           slug?: string
           sync_routes_enabled?: boolean
           sync_routes_last_message?: string | null
