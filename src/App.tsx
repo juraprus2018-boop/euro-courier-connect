@@ -13,6 +13,7 @@ import ContactPage from "./pages/ContactPage";
 import AdminLogin from "./pages/admin/AdminLogin";
 import AdminDashboard from "./pages/admin/AdminDashboard";
 import AdminLanden from "./pages/admin/AdminLanden";
+import AdminLandBranding from "./pages/admin/AdminLandBranding";
 import AdminNlPlaatsen from "./pages/admin/AdminNlPlaatsen";
 import AdminBuitenlandSteden from "./pages/admin/AdminBuitenlandSteden";
 import AdminRoutes from "./pages/admin/AdminRoutes";
@@ -40,6 +41,7 @@ const App = () => (
           <Route path="/admin/login" element={<AdminLogin />} />
           <Route path="/admin" element={<AdminDashboard />} />
           <Route path="/admin/landen" element={<AdminLanden />} />
+          <Route path="/admin/landen/:id/branding" element={<AdminLandBranding />} />
           <Route path="/admin/nl-plaatsen" element={<AdminNlPlaatsen />} />
           <Route path="/admin/buitenland-steden" element={<AdminBuitenlandSteden />} />
           <Route path="/admin/routes" element={<AdminRoutes />} />

@@ -8,6 +8,14 @@ interface Land {
   domein: string | null;
   km_tarief: number;
   actief: boolean;
+  primary_color?: string | null;
+  secondary_color?: string | null;
+  hero_titel?: string | null;
+  hero_subtitel?: string | null;
+  hero_afbeelding_url?: string | null;
+  meta_title?: string | null;
+  meta_description?: string | null;
+  faq?: Array<{ vraag: string; antwoord: string }> | null;
 }
 
 export function useLand() {
@@ -47,7 +55,12 @@ export function useLand() {
         );
         
         if (matchedLand) {
-          setLand(matchedLand);
+          // Parse FAQ from JSON if it exists
+          const parsedLand: Land = {
+            ...matchedLand,
+            faq: matchedLand.faq as Array<{ vraag: string; antwoord: string }> | null
+          };
+          setLand(parsedLand);
         }
       }
       
