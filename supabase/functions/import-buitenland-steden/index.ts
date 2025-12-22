@@ -14,61 +14,61 @@ function slugify(text: string): string {
     .replace(/(^-|-$)/g, '');
 }
 
-// Map country names to GeoNames country codes
+// Map country names to ISO country codes for Overpass API
 const countryCodeMap: Record<string, string> = {
-  'frankrijk': 'FR',
-  'france': 'FR',
-  'duitsland': 'DE',
-  'germany': 'DE',
-  'belgie': 'BE',
-  'belgium': 'BE',
-  'belgië': 'BE',
-  'spanje': 'ES',
-  'spain': 'ES',
-  'italie': 'IT',
-  'italy': 'IT',
-  'italië': 'IT',
-  'portugal': 'PT',
-  'oostenrijk': 'AT',
-  'austria': 'AT',
-  'zwitserland': 'CH',
-  'switzerland': 'CH',
-  'polen': 'PL',
-  'poland': 'PL',
-  'tsjechie': 'CZ',
-  'tsjechië': 'CZ',
-  'czechia': 'CZ',
-  'denemarken': 'DK',
-  'denmark': 'DK',
-  'zweden': 'SE',
-  'sweden': 'SE',
-  'noorwegen': 'NO',
-  'norway': 'NO',
-  'finland': 'FI',
-  'engeland': 'GB',
-  'verenigd koninkrijk': 'GB',
-  'united kingdom': 'GB',
-  'ierland': 'IE',
-  'ireland': 'IE',
-  'luxemburg': 'LU',
-  'luxembourg': 'LU',
-  'griekenland': 'GR',
-  'greece': 'GR',
-  'hongarije': 'HU',
-  'hungary': 'HU',
-  'roemenie': 'RO',
-  'roemenië': 'RO',
-  'romania': 'RO',
-  'bulgarije': 'BG',
-  'bulgaria': 'BG',
-  'kroatie': 'HR',
-  'kroatië': 'HR',
-  'croatia': 'HR',
-  'slovenie': 'SI',
-  'slovenië': 'SI',
-  'slovenia': 'SI',
-  'slowakije': 'SK',
-  'slovakia': 'SK',
+  'frankrijk': 'France',
+  'france': 'France',
+  'duitsland': 'Germany',
+  'germany': 'Germany',
+  'belgie': 'Belgium',
+  'belgium': 'Belgium',
+  'belgië': 'Belgium',
+  'spanje': 'Spain',
+  'spain': 'Spain',
+  'italie': 'Italy',
+  'italy': 'Italy',
+  'italië': 'Italy',
+  'portugal': 'Portugal',
+  'oostenrijk': 'Austria',
+  'austria': 'Austria',
+  'zwitserland': 'Switzerland',
+  'switzerland': 'Switzerland',
+  'polen': 'Poland',
+  'poland': 'Poland',
+  'tsjechie': 'Czechia',
+  'tsjechië': 'Czechia',
+  'czechia': 'Czechia',
+  'denemarken': 'Denmark',
+  'denmark': 'Denmark',
+  'zweden': 'Sweden',
+  'sweden': 'Sweden',
+  'noorwegen': 'Norway',
+  'norway': 'Norway',
+  'finland': 'Finland',
+  'engeland': 'United Kingdom',
+  'verenigd koninkrijk': 'United Kingdom',
+  'united kingdom': 'United Kingdom',
+  'ierland': 'Ireland',
+  'ireland': 'Ireland',
+  'luxemburg': 'Luxembourg',
+  'luxembourg': 'Luxembourg',
+  'griekenland': 'Greece',
+  'greece': 'Greece',
+  'hongarije': 'Hungary',
+  'hungary': 'Hungary',
+  'roemenie': 'Romania',
+  'roemenië': 'Romania',
+  'romania': 'Romania',
+  'bulgarije': 'Bulgaria',
+  'bulgaria': 'Bulgaria',
+  'kroatie': 'Croatia',
+  'kroatië': 'Croatia',
+  'croatia': 'Croatia',
+  'slovenie': 'Slovenia',
+  'slovenië': 'Slovenia',
+  'slovenia': 'Slovenia',
+  'slowakije': 'Slovakia',
+  'slovakia': 'Slovakia',
 };
 
 Deno.serve(async (req) => {
@@ -85,117 +85,82 @@ Deno.serve(async (req) => {
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    // Get country code from name
-    const countryCode = countryCodeMap[landNaam.toLowerCase()];
+    // Get country name for Overpass API
+    const countryName = countryCodeMap[landNaam.toLowerCase()];
     
-    if (!countryCode) {
+    if (!countryName) {
       console.error(`Unknown country: ${landNaam}`);
       return new Response(
         JSON.stringify({ 
           success: false, 
           error: `Onbekend land: ${landNaam}. Voeg de landcode toe aan de mapping.`,
-          supportedCountries: Object.keys(countryCodeMap).filter((_, i, arr) => arr.indexOf(arr[i]) === i)
+          supportedCountries: [...new Set(Object.keys(countryCodeMap))]
         }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
       );
     }
 
-    console.log(`Country code for ${landNaam}: ${countryCode}`);
+    console.log(`Country name for Overpass: ${countryName}`);
 
-    // Use GeoNames API to fetch cities (free API, no key needed for small requests)
-    // We'll use the public search endpoint
-    const geoNamesUrl = `http://api.geonames.org/searchJSON?country=${countryCode}&featureClass=P&featureCode=PPL&featureCode=PPLA&featureCode=PPLA2&featureCode=PPLA3&featureCode=PPLC&maxRows=1000&username=demo&orderby=population`;
+    // Use Overpass API (OpenStreetMap) - completely free, no limits for reasonable use
+    // Query for cities and towns with population data
+    const overpassQuery = `
+      [out:json][timeout:60];
+      area["name"="${countryName}"]["admin_level"="2"]->.country;
+      (
+        node["place"="city"](area.country);
+        node["place"="town"](area.country);
+      );
+      out center;
+    `;
     
-    console.log(`Fetching cities from GeoNames...`);
+    const overpassUrl = 'https://overpass-api.de/api/interpreter';
     
-    const response = await fetch(geoNamesUrl);
+    console.log(`Fetching cities from Overpass API...`);
+    
+    const response = await fetch(overpassUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+      },
+      body: `data=${encodeURIComponent(overpassQuery)}`
+    });
     
     if (!response.ok) {
-      // Fallback: use alternative free API
-      console.log('GeoNames failed, trying alternative approach...');
-      
-      // Use Nominatim OpenStreetMap API as fallback
-      const nominatimUrl = `https://nominatim.openstreetmap.org/search?country=${countryCode}&featuretype=city&format=json&limit=500&addressdetails=1`;
-      
-      const nominatimResponse = await fetch(nominatimUrl, {
-        headers: {
-          'User-Agent': 'CourierApp/1.0'
-        }
-      });
-      
-      if (!nominatimResponse.ok) {
-        throw new Error('Failed to fetch cities from both GeoNames and Nominatim');
-      }
-      
-      const nominatimData = await nominatimResponse.json();
-      console.log(`Found ${nominatimData.length} cities from Nominatim`);
-      
-      const cities = nominatimData.map((place: any) => ({
-        naam: place.display_name.split(',')[0],
-        slug: slugify(place.display_name.split(',')[0]),
-        land_id: landId,
-        latitude: parseFloat(place.lat),
-        longitude: parseFloat(place.lon),
-        route_generatie_status: 'pending'
-      }));
-      
-      // Filter duplicates by slug
-      const seenSlugs = new Set<string>();
-      const uniqueCities = cities.filter((city: any) => {
-        if (seenSlugs.has(city.slug)) return false;
-        seenSlugs.add(city.slug);
-        return true;
-      });
-      
-      // Upsert in batches
-      const batchSize = 100;
-      let insertedCount = 0;
-      
-      for (let i = 0; i < uniqueCities.length; i += batchSize) {
-        const batch = uniqueCities.slice(i, i + batchSize);
-        const { error } = await supabase
-          .from('buitenland_steden')
-          .upsert(batch, { onConflict: 'slug' });
-        
-        if (error) {
-          console.error('Batch insert error:', error);
-        } else {
-          insertedCount += batch.length;
-        }
-      }
-      
+      const errorText = await response.text();
+      console.error('Overpass API error:', errorText);
+      throw new Error(`Overpass API error: ${response.status}`);
+    }
+
+    const overpassData = await response.json();
+    
+    console.log(`Found ${overpassData.elements?.length || 0} places from Overpass`);
+
+    if (!overpassData.elements || overpassData.elements.length === 0) {
       return new Response(
         JSON.stringify({ 
-          success: true, 
-          message: `${insertedCount} steden geïmporteerd voor ${landNaam}`,
-          count: insertedCount
+          success: false, 
+          error: `Geen steden gevonden voor ${landNaam}. Probeer het later opnieuw.`
         }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 404 }
       );
     }
 
-    const geoData = await response.json();
-    
-    if (geoData.status) {
-      console.error('GeoNames error:', geoData.status.message);
-      throw new Error(geoData.status.message);
-    }
-
-    console.log(`Found ${geoData.geonames?.length || 0} cities from GeoNames`);
-
-    const cities = (geoData.geonames || []).map((place: any) => ({
-      naam: place.name,
-      slug: slugify(place.name),
-      land_id: landId,
-      latitude: parseFloat(place.lat),
-      longitude: parseFloat(place.lng),
-      route_generatie_status: 'pending'
-    }));
+    const cities = overpassData.elements
+      .filter((el: any) => el.tags?.name)
+      .map((place: any) => ({
+        naam: place.tags.name,
+        slug: slugify(place.tags.name),
+        land_id: landId,
+        latitude: place.lat,
+        longitude: place.lon,
+        route_generatie_status: 'pending'
+      }));
 
     // Filter duplicates by slug
     const seenSlugs = new Set<string>();
     const uniqueCities = cities.filter((city: any) => {
-      if (seenSlugs.has(city.slug)) return false;
+      if (!city.slug || seenSlugs.has(city.slug)) return false;
       seenSlugs.add(city.slug);
       return true;
     });
@@ -218,7 +183,7 @@ Deno.serve(async (req) => {
         errorCount += batch.length;
       } else {
         insertedCount += batch.length;
-        console.log(`Inserted batch ${i / batchSize + 1}: ${batch.length} cities`);
+        console.log(`Inserted batch ${Math.floor(i / batchSize) + 1}: ${batch.length} cities`);
       }
     }
 
