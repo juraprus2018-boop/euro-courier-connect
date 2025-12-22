@@ -12,7 +12,8 @@ import {
   FileText, 
   LogOut,
   Menu,
-  X
+  X,
+  Settings
 } from 'lucide-react';
 import { useState } from 'react';
 import { cn } from '@/lib/utils';
@@ -28,6 +29,7 @@ const navItems = [
   { path: '/admin/buitenland-steden', label: 'Buitenlandse Steden', icon: Building2 },
   { path: '/admin/routes', label: 'Routes', icon: Route },
   { path: '/admin/aanvragen', label: 'Aanvragen', icon: FileText },
+  { path: '/admin/instellingen', label: 'Instellingen', icon: Settings },
 ];
 
 export function AdminLayout({ children }: AdminLayoutProps) {

@@ -15,6 +15,7 @@ import AdminNlPlaatsen from "./pages/admin/AdminNlPlaatsen";
 import AdminBuitenlandSteden from "./pages/admin/AdminBuitenlandSteden";
 import AdminRoutes from "./pages/admin/AdminRoutes";
 import AdminAanvragen from "./pages/admin/AdminAanvragen";
+import AdminInstellingen from "./pages/admin/AdminInstellingen";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -39,6 +40,7 @@ const App = () => (
           <Route path="/admin/buitenland-steden" element={<AdminBuitenlandSteden />} />
           <Route path="/admin/routes" element={<AdminRoutes />} />
           <Route path="/admin/aanvragen" element={<AdminAanvragen />} />
+          <Route path="/admin/instellingen" element={<AdminInstellingen />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>

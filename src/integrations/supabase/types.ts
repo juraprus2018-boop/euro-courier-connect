@@ -178,6 +178,33 @@ export type Database = {
           },
         ]
       }
+      instellingen: {
+        Row: {
+          beschrijving: string | null
+          created_at: string
+          id: string
+          sleutel: string
+          updated_at: string
+          waarde: string
+        }
+        Insert: {
+          beschrijving?: string | null
+          created_at?: string
+          id?: string
+          sleutel: string
+          updated_at?: string
+          waarde: string
+        }
+        Update: {
+          beschrijving?: string | null
+          created_at?: string
+          id?: string
+          sleutel?: string
+          updated_at?: string
+          waarde?: string
+        }
+        Relationships: []
+      }
       landen: {
         Row: {
           actief: boolean

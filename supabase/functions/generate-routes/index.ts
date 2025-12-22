@@ -20,6 +20,22 @@ serve(async (req) => {
 
   console.log(`Generating routes for stad: ${stadId}`);
 
+  // Get settings from instellingen table
+  const { data: instellingen } = await supabase
+    .from('instellingen')
+    .select('sleutel, waarde');
+
+  const settings: Record<string, string> = {};
+  instellingen?.forEach((item: { sleutel: string; waarde: string }) => {
+    settings[item.sleutel] = item.waarde;
+  });
+
+  const kmTarief = parseFloat(settings.km_tarief || '0.50');
+  const depotLat = parseFloat(settings.depot_latitude || '51.4386732');
+  const depotLon = parseFloat(settings.depot_longitude || '5.5223595');
+
+  console.log(`Settings: km_tarief=${kmTarief}, depot=${depotLat},${depotLon}`);
+
   // Get the city info
   const { data: stad } = await supabase
     .from('buitenland_steden')
@@ -45,27 +61,37 @@ serve(async (req) => {
     if (!plaats.latitude || !plaats.longitude || !stad.latitude || !stad.longitude) continue;
 
     try {
-      // Call OSRM for distance
-      const osrmUrl = `https://router.project-osrm.org/route/v1/driving/${plaats.longitude},${plaats.latitude};${stad.longitude},${stad.latitude}?overview=false`;
+      // Route: Depot -> NL plaats (ophaal) -> Buitenland stad (bestemming) -> Depot
+      // We need to calculate 3 segments:
+      // 1. Depot to NL plaats
+      // 2. NL plaats to Buitenland stad  
+      // 3. Buitenland stad back to Depot
+      
+      const osrmUrl = `https://router.project-osrm.org/route/v1/driving/${depotLon},${depotLat};${plaats.longitude},${plaats.latitude};${stad.longitude},${stad.latitude};${depotLon},${depotLat}?overview=false`;
+      
+      console.log(`Calculating route: Depot -> ${plaats.naam} -> ${stad.naam} -> Depot`);
+      
       const response = await fetch(osrmUrl);
       const data = await response.json();
 
       if (data.routes && data.routes[0]) {
-        const distanceKm = Math.round(data.routes[0].distance / 1000);
-        const prijs = distanceKm * Number(stad.land.km_tarief);
+        // Total distance for the complete round trip
+        const totalDistanceKm = Math.round(data.routes[0].distance / 1000);
+        const prijs = Math.round(totalDistanceKm * kmTarief);
 
         await supabase.from('routes').upsert({
           nl_plaats_id: plaats.id,
           buitenland_stad_id: stadId,
-          afstand_km: distanceKm,
+          afstand_km: totalDistanceKm,
           geschatte_prijs: prijs,
           slug: `${slugify(plaats.naam)}-naar-${slugify(stad.naam)}`,
         }, { onConflict: 'nl_plaats_id,buitenland_stad_id' });
 
         generated++;
+        console.log(`Route generated: ${plaats.naam} -> ${stad.naam}: ${totalDistanceKm}km, €${prijs}`);
       }
 
-      // Rate limit
+      // Rate limit to avoid OSRM throttling
       await new Promise(r => setTimeout(r, 100));
     } catch (err) {
       console.error(`Error for ${plaats.naam}:`, err);
