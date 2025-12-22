@@ -43,18 +43,24 @@ serve(async (req) => {
     
     if (steden && steden.length > 0) {
       const stadIds = steden.map(s => s.id);
+      let totalDeleted = 0;
       
-      const { error: deleteError, count } = await supabase
-        .from('routes')
-        .delete({ count: 'exact' })
-        .in('buitenland_stad_id', stadIds);
-      
-      if (deleteError) {
-        console.error('Error deleting routes:', deleteError);
-        return new Response(JSON.stringify({ error: 'Fout bij verwijderen routes' }), { 
-          status: 500, 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
-        });
+      // Delete in batches of 100 to avoid "Bad Request" errors
+      const batchSize = 100;
+      for (let i = 0; i < stadIds.length; i += batchSize) {
+        const batch = stadIds.slice(i, i + batchSize);
+        
+        const { error: deleteError, count } = await supabase
+          .from('routes')
+          .delete({ count: 'exact' })
+          .in('buitenland_stad_id', batch);
+        
+        if (deleteError) {
+          console.error('Error deleting routes batch:', deleteError);
+          // Continue with next batch instead of failing completely
+        } else {
+          totalDeleted += count || 0;
+        }
       }
       
       // Reset sync status
@@ -62,11 +68,11 @@ serve(async (req) => {
         sync_routes_status: 'idle',
         sync_routes_progress: 0,
         sync_routes_total: 0,
-        sync_routes_last_message: `${count || 0} routes verwijderd`
+        sync_routes_last_message: `${totalDeleted} routes verwijderd`
       }).eq('id', landId);
       
-      console.log(`Deleted ${count} routes for land ${landId}`);
-      return new Response(JSON.stringify({ success: true, deleted: count, message: `${count || 0} routes verwijderd` }), {
+      console.log(`Deleted ${totalDeleted} routes for land ${landId}`);
+      return new Response(JSON.stringify({ success: true, deleted: totalDeleted, message: `${totalDeleted} routes verwijderd` }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
