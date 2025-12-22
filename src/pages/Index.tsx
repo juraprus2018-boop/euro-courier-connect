@@ -11,41 +11,44 @@ import { RouteCard } from '@/components/public/RouteCard';
 import { USPSection } from '@/components/public/USPSection';
 import { FAQSection } from '@/components/public/FAQSection';
 import { CTASection } from '@/components/public/CTASection';
+// Main site components
+import { MainHeroSection } from '@/components/public/MainHeroSection';
+import { ServicesSection } from '@/components/public/ServicesSection';
+import { CountriesSection } from '@/components/public/CountriesSection';
+import { StatsSection } from '@/components/public/StatsSection';
+import { TestimonialsSection } from '@/components/public/TestimonialsSection';
+import { MainCTASection } from '@/components/public/MainCTASection';
 import { Loader2 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 const Index = () => {
   const { land, isHoofdsite, loading: landLoading } = useLand();
 
-  // Fetch popular routes (with optional land filter)
+  // Fetch popular routes (only for country-specific sites)
   const { data: routes, isLoading: routesLoading } = useQuery({
     queryKey: ['popular-routes', land?.id],
     queryFn: async () => {
-      let query = supabase
+      const { data: steden } = await supabase
+        .from('buitenland_steden')
+        .select('id')
+        .eq('land_id', land!.id);
+      
+      if (!steden || steden.length === 0) return [];
+
+      const { data, error } = await supabase
         .from('routes')
         .select(`
           *,
           nl_plaats:nl_plaatsen(*),
           buitenland_stad:buitenland_steden(*, land:landen(*))
         `)
+        .in('buitenland_stad_id', steden.map(s => s.id))
         .limit(6);
-
-      if (land) {
-        // Filter routes for this specific country
-        const { data: steden } = await supabase
-          .from('buitenland_steden')
-          .select('id')
-          .eq('land_id', land.id);
-        
-        if (steden && steden.length > 0) {
-          query = query.in('buitenland_stad_id', steden.map(s => s.id));
-        }
-      }
-
-      const { data, error } = await query;
+      
       if (error) throw error;
       return data;
     },
+    enabled: !!land,
   });
 
   // Fetch destinations for this land (country-specific site)
@@ -72,7 +75,7 @@ const Index = () => {
     );
   }
 
-  // Country-specific site
+  // Country-specific site (e.g., kroatiekoerier.nl)
   if (land) {
     return (
       <LandThemeProvider>
@@ -191,72 +194,22 @@ const Index = () => {
     );
   }
 
-  // Main site (deeuropakoerier.nl) - show overview of all countries
+  // Main site (deeuropakoerier.nl) - Professional landing page
   return (
     <div className="min-h-screen flex flex-col">
-      <SEOHead />
+      <SEOHead 
+        title="De Europa Koerier | Betrouwbare koeriersdiensten door heel Europa"
+        description="Al meer dan 15 jaar uw betrouwbare koerierspartner voor transport van Nederland naar heel Europa. Dagelijkse ritten, persoonlijke service, 100% verzekerd."
+      />
       <Header />
       
       <main className="flex-1">
-        <HeroSection />
-        
-        {/* Search Section */}
-        <section className="py-16 bg-muted/50">
-          <div className="container">
-            <div className="text-center mb-8">
-              <h2 className="font-display text-3xl font-bold">Zoek uw route</h2>
-              <p className="mt-2 text-muted-foreground">
-                Vind direct de route en prijs voor uw zending
-              </p>
-            </div>
-            <SearchRoutes />
-          </div>
-        </section>
-
-        {/* Popular Routes Section */}
-        <section className="py-16">
-          <div className="container">
-            <div className="text-center mb-8">
-              <h2 className="font-display text-3xl font-bold">
-                Populaire routes
-              </h2>
-              <p className="mt-2 text-muted-foreground">
-                Bekijk onze meest gevraagde koeriersroutes
-              </p>
-            </div>
-            
-            {routesLoading ? (
-              <div className="flex justify-center py-12">
-                <Loader2 className="h-8 w-8 animate-spin text-primary" />
-              </div>
-            ) : routes && routes.length > 0 ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {routes.map((route) => (
-                  <RouteCard 
-                    key={route.id} 
-                    nlPlaats={route.nl_plaats?.naam || ''}
-                    buitenlandStad={route.buitenland_stad?.naam || ''}
-                    afstandKm={route.afstand_km}
-                    prijs={route.geschatte_prijs}
-                    slug={route.slug}
-                  />
-                ))}
-              </div>
-            ) : (
-              <div className="text-center py-12">
-                <p className="text-muted-foreground">
-                  Nog geen routes beschikbaar.
-                </p>
-              </div>
-            )}
-          </div>
-        </section>
-
-        <USPSection />
-        
-        <FAQSection />
-        
-        <CTASection />
+        <MainHeroSection />
+        <StatsSection />
+        <ServicesSection />
+        <CountriesSection />
+        <TestimonialsSection />
+        <MainCTASection />
       </main>
       
       <Footer />
