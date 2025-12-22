@@ -79,7 +79,7 @@ const AdminLandBranding = () => {
 
       const landData: Land = {
         ...data,
-        faq: Array.isArray(data.faq) ? data.faq as FAQItem[] : null
+        faq: Array.isArray(data.faq) ? (data.faq as unknown as FAQItem[]) : null
       };
 
       setLand(landData);
@@ -91,7 +91,7 @@ const AdminLandBranding = () => {
         hero_afbeelding_url: data.hero_afbeelding_url || '',
         meta_title: data.meta_title || '',
         meta_description: data.meta_description || '',
-        faq: Array.isArray(data.faq) ? data.faq as FAQItem[] : [],
+        faq: Array.isArray(data.faq) ? (data.faq as unknown as FAQItem[]) : [],
       });
       setLoading(false);
     };
