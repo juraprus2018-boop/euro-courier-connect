@@ -288,7 +288,7 @@ Deno.serve(async (req) => {
       const batch = uniqueCities.slice(i, i + batchSize);
       const { error } = await supabase
         .from('buitenland_steden')
-        .upsert(batch, { onConflict: 'slug' });
+        .upsert(batch, { onConflict: 'land_id,slug' });
       
       if (error) {
         console.error('Batch insert error:', error);
