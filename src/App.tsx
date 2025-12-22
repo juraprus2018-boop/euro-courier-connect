@@ -6,6 +6,8 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import Index from "./pages/Index";
 import RoutesPage from "./pages/RoutesPage";
 import RouteDetailPage from "./pages/RouteDetailPage";
+import BestemmingenPage from "./pages/BestemmingenPage";
+import BestemmingDetailPage from "./pages/BestemmingDetailPage";
 import QuotePage from "./pages/QuotePage";
 import ContactPage from "./pages/ContactPage";
 import AdminLogin from "./pages/admin/AdminLogin";
@@ -30,6 +32,8 @@ const App = () => (
           <Route path="/" element={<Index />} />
           <Route path="/routes" element={<RoutesPage />} />
           <Route path="/route/:slug" element={<RouteDetailPage />} />
+          <Route path="/bestemmingen" element={<BestemmingenPage />} />
+          <Route path="/bestemming/:slug" element={<BestemmingDetailPage />} />
           <Route path="/offerte" element={<QuotePage />} />
           <Route path="/contact" element={<ContactPage />} />
           <Route path="/auth" element={<Navigate to="/admin/login" replace />} />
