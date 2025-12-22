@@ -13,6 +13,20 @@ const slugify = (text: string) =>
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/(^-|-$)/g, '');
 
+// Top 10 grootste steden in Nederland met coördinaten
+const top10NederlandseSteden = [
+  { naam: "Amsterdam", gemeente: "Amsterdam", provincie: "Noord-Holland", latitude: 52.3676, longitude: 4.9041 },
+  { naam: "Rotterdam", gemeente: "Rotterdam", provincie: "Zuid-Holland", latitude: 51.9225, longitude: 4.4792 },
+  { naam: "Den Haag", gemeente: "'s-Gravenhage", provincie: "Zuid-Holland", latitude: 52.0705, longitude: 4.3007 },
+  { naam: "Utrecht", gemeente: "Utrecht", provincie: "Utrecht", latitude: 52.0907, longitude: 5.1214 },
+  { naam: "Eindhoven", gemeente: "Eindhoven", provincie: "Noord-Brabant", latitude: 51.4416, longitude: 5.4697 },
+  { naam: "Groningen", gemeente: "Groningen", provincie: "Groningen", latitude: 53.2194, longitude: 6.5665 },
+  { naam: "Tilburg", gemeente: "Tilburg", provincie: "Noord-Brabant", latitude: 51.5555, longitude: 5.0913 },
+  { naam: "Almere", gemeente: "Almere", provincie: "Flevoland", latitude: 52.3508, longitude: 5.2647 },
+  { naam: "Breda", gemeente: "Breda", provincie: "Noord-Brabant", latitude: 51.5719, longitude: 4.7683 },
+  { naam: "Nijmegen", gemeente: "Nijmegen", provincie: "Gelderland", latitude: 51.8126, longitude: 5.8372 },
+];
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -23,125 +37,53 @@ serve(async (req) => {
     Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
   );
 
-  console.log('Starting NL places import from PDOK Locatieserver...');
+  console.log('Starting NL places import - clearing existing and importing top 10...');
 
   try {
-    // Use PDOK Locatieserver to get all woonplaatsen
-    // Total is about 2500 places, we fetch in batches of 100 (API max)
-    const allPlaatsen: any[] = [];
-    let start = 0;
-    const rows = 100;
-    let hasMore = true;
+    // Stap 1: Verwijder alle bestaande plaatsen
+    console.log('Clearing all existing nl_plaatsen...');
+    const { error: deleteError } = await supabase
+      .from('nl_plaatsen')
+      .delete()
+      .neq('id', '00000000-0000-0000-0000-000000000000'); // Delete all
 
-    while (hasMore) {
-      // Properly encode the query parameter
-      const baseUrl = 'https://api.pdok.nl/bzk/locatieserver/search/v3_1/free';
-      const params = new URLSearchParams({
-        q: 'type:woonplaats',
-        rows: rows.toString(),
-        start: start.toString()
+    if (deleteError) {
+      console.error('Error clearing plaatsen:', deleteError);
+      throw new Error(`Fout bij legen plaatsen: ${deleteError.message}`);
+    }
+    console.log('All existing plaatsen cleared');
+
+    // Stap 2: Importeer top 10 steden
+    const plaatsenToInsert = top10NederlandseSteden.map(stad => ({
+      naam: stad.naam,
+      slug: slugify(stad.naam),
+      gemeente: stad.gemeente,
+      provincie: stad.provincie,
+      latitude: stad.latitude,
+      longitude: stad.longitude,
+    }));
+
+    console.log('Inserting top 10 cities:', plaatsenToInsert.map(p => p.naam).join(', '));
+
+    const { error: insertError } = await supabase
+      .from('nl_plaatsen')
+      .upsert(plaatsenToInsert, { 
+        onConflict: 'slug',
+        ignoreDuplicates: false 
       });
-      const url = `${baseUrl}?${params.toString()}`;
-      
-      console.log(`Fetching woonplaatsen, start=${start}, url=${url}`);
-      const response = await fetch(url);
-      
-      if (!response.ok) {
-        const text = await response.text();
-        console.error(`PDOK error response: ${text}`);
-        throw new Error(`PDOK request failed: ${response.status}`);
-      }
 
-      const data = await response.json();
-      const docs = data.response?.docs || [];
-      
-      console.log(`Fetched ${docs.length} woonplaatsen at offset ${start}`);
-      
-      if (docs.length === 0) {
-        hasMore = false;
-      } else {
-        allPlaatsen.push(...docs);
-        start += rows;
-        
-        // Stop when we've fetched all
-        if (docs.length < rows) {
-          hasMore = false;
-        }
-        
-        // Small delay between requests
-        await new Promise(r => setTimeout(r, 100));
-      }
+    if (insertError) {
+      console.error('Insert error:', insertError);
+      throw new Error(`Fout bij importeren: ${insertError.message}`);
     }
 
-    console.log(`Total woonplaatsen fetched: ${allPlaatsen.length}`);
-
-    let imported = 0;
-    let errors = 0;
-    const seen = new Set<string>();
-
-    // Process in batches
-    const batchSize = 100;
-    
-    for (let i = 0; i < allPlaatsen.length; i += batchSize) {
-      const batch = allPlaatsen.slice(i, i + batchSize);
-      
-      const plaatsenToInsert = batch.map((doc: any) => {
-        const naam = doc.woonplaatsnaam;
-        if (!naam) return null;
-        
-        const slug = slugify(naam);
-        
-        // Skip duplicates
-        if (seen.has(slug)) return null;
-        seen.add(slug);
-
-        // Parse coordinates from centroide_ll (format: "POINT(lon lat)")
-        let lat = null;
-        let lon = null;
-        
-        if (doc.centroide_ll) {
-          const match = doc.centroide_ll.match(/POINT\(([^ ]+) ([^)]+)\)/);
-          if (match) {
-            lon = parseFloat(match[1]);
-            lat = parseFloat(match[2]);
-          }
-        }
-
-        return {
-          naam: naam,
-          slug: slug,
-          gemeente: doc.gemeentenaam || null,
-          provincie: doc.provincienaam || null,
-          latitude: lat,
-          longitude: lon,
-        };
-      }).filter(Boolean);
-
-      if (plaatsenToInsert.length > 0) {
-        const { error } = await supabase
-          .from('nl_plaatsen')
-          .upsert(plaatsenToInsert, { 
-            onConflict: 'slug',
-            ignoreDuplicates: true 
-          });
-
-        if (error) {
-          console.error(`Batch error at ${i}:`, error);
-          errors++;
-        } else {
-          imported += plaatsenToInsert.length;
-        }
-      }
-    }
-
-    console.log(`Import complete: ${imported} unique places imported, ${errors} batch errors`);
+    console.log('Import complete: 10 cities imported');
 
     return new Response(JSON.stringify({ 
       success: true, 
-      imported,
-      total: allPlaatsen.length,
-      unique: seen.size,
-      errors 
+      imported: 10,
+      cleared: true,
+      cities: plaatsenToInsert.map(p => p.naam)
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
