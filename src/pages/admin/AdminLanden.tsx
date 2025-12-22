@@ -67,7 +67,9 @@ const AdminLanden = () => {
   const { toast } = useToast();
 
   const fetchLanden = async () => {
-    // Fetch landen with count of steden
+    setLoading(true);
+
+    // Fetch landen
     const { data, error } = await supabase
       .from('landen')
       .select('*')
@@ -75,23 +77,34 @@ const AdminLanden = () => {
 
     if (error) {
       console.error('Error fetching landen:', error);
+      toast({ title: 'Fout bij ophalen landen', variant: 'destructive' });
       setLoading(false);
       return;
     }
 
-    // Get steden count per land
-    const { data: stedenData } = await supabase
-      .from('buitenland_steden')
-      .select('land_id');
+    const landenList = (data || []) as Land[];
 
-    const stedenCountMap: Record<string, number> = {};
-    (stedenData || []).forEach((stad: { land_id: string }) => {
-      stedenCountMap[stad.land_id] = (stedenCountMap[stad.land_id] || 0) + 1;
-    });
+    // Fetch steden count per land using exact counts (no 1000-row limit)
+    const countPairs = await Promise.all(
+      landenList.map(async (land) => {
+        const { count, error: countError } = await supabase
+          .from('buitenland_steden')
+          .select('id', { count: 'exact', head: true })
+          .eq('land_id', land.id);
 
-    const landenWithCount = (data || []).map(land => ({
+        if (countError) {
+          console.error('Error counting steden for land', land.id, countError);
+        }
+
+        return [land.id, count ?? 0] as const;
+      })
+    );
+
+    const stedenCountMap = Object.fromEntries(countPairs) as Record<string, number>;
+
+    const landenWithCount = landenList.map((land) => ({
       ...land,
-      steden_count: stedenCountMap[land.id] || 0
+      steden_count: stedenCountMap[land.id] || 0,
     }));
 
     setLanden(landenWithCount);
