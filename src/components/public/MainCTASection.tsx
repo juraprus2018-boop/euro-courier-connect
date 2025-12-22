@@ -48,7 +48,7 @@ export function MainCTASection() {
                 <ArrowRight className="ml-2 h-5 w-5" />
               </Link>
             </Button>
-            <Button size="lg" variant="outline" className="border-background/30 text-background hover:bg-background/10 text-lg px-8 py-6" asChild>
+            <Button size="lg" className="bg-background text-foreground hover:bg-background/90 text-lg px-8 py-6" asChild>
               <a href="tel:+31612345678">
                 <Phone className="mr-2 h-5 w-5" />
                 +31 6 1234 5678
