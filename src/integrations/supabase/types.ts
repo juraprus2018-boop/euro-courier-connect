@@ -215,6 +215,7 @@ export type Database = {
           hero_subtitel: string | null
           hero_titel: string | null
           id: string
+          iso_code: string | null
           km_tarief: number
           meta_description: string | null
           meta_title: string | null
@@ -239,6 +240,7 @@ export type Database = {
           hero_subtitel?: string | null
           hero_titel?: string | null
           id?: string
+          iso_code?: string | null
           km_tarief?: number
           meta_description?: string | null
           meta_title?: string | null
@@ -263,6 +265,7 @@ export type Database = {
           hero_subtitel?: string | null
           hero_titel?: string | null
           id?: string
+          iso_code?: string | null
           km_tarief?: number
           meta_description?: string | null
           meta_title?: string | null
