@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Loader2, MapPin, Navigation, Euro, Truck, ArrowRight, Clock } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
-const RouteMap = lazy(() => import('./RouteMap').then(m => ({ default: m.RouteMap })));
+const RouteMap = lazy(() => import('./RouteMap'));
 
 interface Coordinates {
   lat: number;

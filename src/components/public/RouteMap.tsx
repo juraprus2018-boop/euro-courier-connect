@@ -60,7 +60,7 @@ function FitBounds({ pickup, destination }: { pickup: Coordinates | null; destin
   return null;
 }
 
-export function RouteMap({ pickupCoords, destinationCoords, routeCoords }: RouteMapProps) {
+export default function RouteMap({ pickupCoords, destinationCoords, routeCoords }: RouteMapProps) {
   return (
     <MapContainer
       center={[52.0, 10.0]}
