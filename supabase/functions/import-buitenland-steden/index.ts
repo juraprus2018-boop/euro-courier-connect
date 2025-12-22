@@ -71,6 +71,57 @@ const countryCodeMap: Record<string, string> = {
   'slovakia': 'Slovakia',
 };
 
+// Fallback: if Overpass is down/blocked, import a small set of major cities so the app keeps working.
+// (Coordinates are omitted on purpose to avoid relying on another API.)
+const fallbackCitiesByCountry: Record<string, string[]> = {
+  // Keys are the "countryName" values used in the Overpass query (English names).
+  France: [
+    'Paris',
+    'Marseille',
+    'Lyon',
+    'Toulouse',
+    'Nice',
+    'Nantes',
+    'Montpellier',
+    'Strasbourg',
+    'Bordeaux',
+    'Lille',
+    'Rennes',
+    'Reims',
+    'Le Havre',
+    'Saint-Étienne',
+    'Toulon',
+    'Grenoble',
+    'Dijon',
+    'Angers',
+    'Nîmes',
+    'Villeurbanne',
+  ],
+  Germany: ['Berlin', 'Hamburg', 'Munich', 'Cologne', 'Frankfurt', 'Stuttgart', 'Düsseldorf', 'Leipzig', 'Dortmund', 'Essen'],
+  Belgium: ['Brussels', 'Antwerp', 'Ghent', 'Charleroi', 'Liège', 'Bruges', 'Namur', 'Leuven'],
+  Spain: ['Madrid', 'Barcelona', 'Valencia', 'Seville', 'Zaragoza', 'Málaga', 'Murcia', 'Bilbao'],
+  Italy: ['Rome', 'Milan', 'Naples', 'Turin', 'Palermo', 'Genoa', 'Bologna', 'Florence'],
+  Portugal: ['Lisbon', 'Porto', 'Vila Nova de Gaia', 'Braga', 'Coimbra', 'Funchal'],
+  Austria: ['Vienna', 'Graz', 'Linz', 'Salzburg', 'Innsbruck'],
+  Switzerland: ['Zürich', 'Geneva', 'Basel', 'Lausanne', 'Bern'],
+  Poland: ['Warsaw', 'Kraków', 'Łódź', 'Wrocław', 'Poznań', 'Gdańsk'],
+  Czechia: ['Prague', 'Brno', 'Ostrava', 'Plzeň'],
+  Denmark: ['Copenhagen', 'Aarhus', 'Odense', 'Aalborg'],
+  Sweden: ['Stockholm', 'Gothenburg', 'Malmö', 'Uppsala'],
+  Norway: ['Oslo', 'Bergen', 'Trondheim', 'Stavanger'],
+  Finland: ['Helsinki', 'Espoo', 'Tampere', 'Vantaa', 'Turku'],
+  'United Kingdom': ['London', 'Birmingham', 'Manchester', 'Liverpool', 'Leeds', 'Glasgow', 'Edinburgh', 'Bristol'],
+  Ireland: ['Dublin', 'Cork', 'Limerick', 'Galway'],
+  Luxembourg: ['Luxembourg'],
+  Greece: ['Athens', 'Thessaloniki', 'Patras', 'Heraklion'],
+  Hungary: ['Budapest', 'Debrecen', 'Szeged', 'Miskolc'],
+  Romania: ['Bucharest', 'Cluj-Napoca', 'Timișoara', 'Iași', 'Constanța'],
+  Bulgaria: ['Sofia', 'Plovdiv', 'Varna', 'Burgas'],
+  Croatia: ['Zagreb', 'Split', 'Rijeka', 'Osijek'],
+  Slovenia: ['Ljubljana', 'Maribor'],
+  Slovakia: ['Bratislava', 'Košice'],
+};
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -102,6 +153,9 @@ Deno.serve(async (req) => {
 
     console.log(`Country name for Overpass: ${countryName}`);
 
+    const fallbackNames = fallbackCitiesByCountry[countryName] ?? null;
+    let usedFallback = false;
+
     // Multiple Overpass API servers for fallback
     const overpassServers = [
       'https://overpass.kumi.systems/api/interpreter',
@@ -109,11 +163,12 @@ Deno.serve(async (req) => {
       'https://overpass-api.de/api/interpreter',
     ];
 
-    // More reliable query: geocode the country into an area, then fetch cities/towns inside it.
+    // Overpass query (no Overpass-Turbo macros), based on admin boundary relation -> area.
     const overpassQuery = `
-      [out:json][timeout:45];
-      {{geocodeArea:${countryName}}}->.country;
-      node["place"~"city|town"]["name"](area.country);
+      [out:json][timeout:60];
+      relation["boundary"="administrative"]["admin_level"="2"]["name"="${countryName}"];
+      map_to_area->.country;
+      node(area.country)["place"~"city|town"];
       out body;
     `;
     
@@ -157,36 +212,60 @@ Deno.serve(async (req) => {
 
     if (!overpassData || !overpassData.elements) {
       console.error('All Overpass servers failed:', lastError);
-      return new Response(
-        JSON.stringify({
-          success: false,
-          error: `Kon steden niet ophalen. Alle servers zijn druk of niet bereikbaar. Probeer het over enkele minuten opnieuw.`
-        }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+
+      if (fallbackNames?.length) {
+        usedFallback = true;
+        console.log(`Overpass unavailable (${lastError}); using fallback list for ${countryName}`);
+        overpassData = {
+          elements: fallbackNames.map((name) => ({
+            tags: { name },
+            lat: null,
+            lon: null,
+          })),
+        };
+      } else {
+        return new Response(
+          JSON.stringify({
+            success: false,
+            error: `Kon steden niet ophalen. Alle servers zijn druk of niet bereikbaar. Probeer het over enkele minuten opnieuw.`,
+            overpass_error: lastError,
+          }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
     }
     
     console.log(`Found ${overpassData.elements?.length || 0} places from Overpass`);
 
     if (overpassData.elements.length === 0) {
-      return new Response(
-        JSON.stringify({
-          success: false,
-          error: `Geen steden gevonden voor ${landNaam}. Probeer het later opnieuw.`,
-          hint: `Dit komt meestal door een drukke Overpass-server. Probeer opnieuw (eventueel een andere server) of probeer later.`
-        }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+      if (fallbackNames?.length) {
+        usedFallback = true;
+        console.log(`Overpass returned 0 results; using fallback list for ${countryName}`);
+        overpassData.elements = fallbackNames.map((name) => ({
+          tags: { name },
+          lat: null,
+          lon: null,
+        }));
+      } else {
+        return new Response(
+          JSON.stringify({
+            success: false,
+            error: `Geen steden gevonden voor ${landNaam}. Probeer het later opnieuw.`,
+            hint: `Dit komt meestal door een drukke Overpass-server. Probeer opnieuw (eventueel een andere server) of probeer later.`,
+          }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
     }
 
     const cities = overpassData.elements
       .filter((el: any) => el.tags?.name)
       .map((place: any) => ({
-        naam: place.tags.name,
-        slug: slugify(place.tags.name),
+        naam: String(place.tags.name).trim(),
+        slug: slugify(String(place.tags.name)),
         land_id: landId,
-        latitude: place.lat,
-        longitude: place.lon,
+        latitude: place.lat ?? null,
+        longitude: place.lon ?? null,
         route_generatie_status: 'pending'
       }));
 
@@ -223,11 +302,14 @@ Deno.serve(async (req) => {
     console.log(`Import complete: ${insertedCount} cities inserted, ${errorCount} errors`);
 
     return new Response(
-      JSON.stringify({ 
-        success: true, 
-        message: `${insertedCount} steden geïmporteerd voor ${landNaam}`,
+      JSON.stringify({
+        success: true,
+        message: usedFallback
+          ? `${insertedCount} steden geïmporteerd voor ${landNaam} (fallback-lijst; Overpass tijdelijk niet beschikbaar)`
+          : `${insertedCount} steden geïmporteerd voor ${landNaam}`,
         count: insertedCount,
-        errors: errorCount
+        errors: errorCount,
+        used_fallback: usedFallback
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
