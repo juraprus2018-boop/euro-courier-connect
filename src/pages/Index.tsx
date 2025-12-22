@@ -189,7 +189,7 @@ const Index = () => {
     );
   }
 
-  // Main site (deeuropakoerier.nl) - Corporate landing page (no routes/destinations)
+  // Main site (deeuropakoerier.nl) - Corporate landing page
   return (
     <div className="min-h-screen flex flex-col">
       <SEOHead 
@@ -201,6 +201,7 @@ const Index = () => {
       <main className="flex-1">
         <MainHeroSection />
         <StatsSection />
+        <PriceCalculator />
         <ServicesSection />
         <CountriesSection />
         <TestimonialsSection />
