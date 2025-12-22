@@ -6,6 +6,13 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+const slugify = (text: string) => 
+  text.toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/(^-|-$)/g, '');
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -16,50 +23,133 @@ serve(async (req) => {
     Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
   );
 
-  console.log('Starting NL places import...');
+  console.log('Starting NL places import from PDOK...');
 
-  // Sample Dutch cities - in production, fetch from CBS API
-  const plaatsen = [
-    { naam: 'Amsterdam', gemeente: 'Amsterdam', provincie: 'Noord-Holland', lat: 52.3676, lon: 4.9041 },
-    { naam: 'Rotterdam', gemeente: 'Rotterdam', provincie: 'Zuid-Holland', lat: 51.9244, lon: 4.4777 },
-    { naam: 'Den Haag', gemeente: "'s-Gravenhage", provincie: 'Zuid-Holland', lat: 52.0705, lon: 4.3007 },
-    { naam: 'Utrecht', gemeente: 'Utrecht', provincie: 'Utrecht', lat: 52.0907, lon: 5.1214 },
-    { naam: 'Eindhoven', gemeente: 'Eindhoven', provincie: 'Noord-Brabant', lat: 51.4416, lon: 5.4697 },
-    { naam: 'Groningen', gemeente: 'Groningen', provincie: 'Groningen', lat: 53.2194, lon: 6.5665 },
-    { naam: 'Tilburg', gemeente: 'Tilburg', provincie: 'Noord-Brabant', lat: 51.5555, lon: 5.0913 },
-    { naam: 'Almere', gemeente: 'Almere', provincie: 'Flevoland', lat: 52.3508, lon: 5.2647 },
-    { naam: 'Breda', gemeente: 'Breda', provincie: 'Noord-Brabant', lat: 51.5719, lon: 4.7683 },
-    { naam: 'Nijmegen', gemeente: 'Nijmegen', provincie: 'Gelderland', lat: 51.8426, lon: 5.8546 },
-    { naam: 'Apeldoorn', gemeente: 'Apeldoorn', provincie: 'Gelderland', lat: 52.2112, lon: 5.9699 },
-    { naam: 'Haarlem', gemeente: 'Haarlem', provincie: 'Noord-Holland', lat: 52.3874, lon: 4.6462 },
-    { naam: 'Arnhem', gemeente: 'Arnhem', provincie: 'Gelderland', lat: 51.9851, lon: 5.8987 },
-    { naam: 'Enschede', gemeente: 'Enschede', provincie: 'Overijssel', lat: 52.2215, lon: 6.8937 },
-    { naam: 'Amersfoort', gemeente: 'Amersfoort', provincie: 'Utrecht', lat: 52.1561, lon: 5.3878 },
-    { naam: 'Zaanstad', gemeente: 'Zaanstad', provincie: 'Noord-Holland', lat: 52.4559, lon: 4.8286 },
-    { naam: "'s-Hertogenbosch", gemeente: "'s-Hertogenbosch", provincie: 'Noord-Brabant', lat: 51.6998, lon: 5.3049 },
-    { naam: 'Zwolle', gemeente: 'Zwolle', provincie: 'Overijssel', lat: 52.5168, lon: 6.0830 },
-    { naam: 'Maastricht', gemeente: 'Maastricht', provincie: 'Limburg', lat: 50.8514, lon: 5.6910 },
-    { naam: 'Leiden', gemeente: 'Leiden', provincie: 'Zuid-Holland', lat: 52.1601, lon: 4.4970 },
-  ];
+  try {
+    // PDOK WFS service for woonplaatsen (residential places)
+    // This returns all official Dutch place names with coordinates
+    const pdokUrl = 'https://service.pdok.nl/kadaster/bestuurlijkegebieden/wfs/v1_0?' +
+      'service=WFS&version=2.0.0&request=GetFeature&' +
+      'typeName=bestuurlijkegebieden:Gemeentegebied&' +
+      'outputFormat=application/json&srsName=EPSG:4326';
 
-  const slugify = (text: string) => text.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+    console.log('Fetching gemeenten from PDOK...');
+    const gemeenteResponse = await fetch(pdokUrl);
+    
+    if (!gemeenteResponse.ok) {
+      throw new Error(`PDOK gemeente request failed: ${gemeenteResponse.status}`);
+    }
 
-  for (const plaats of plaatsen) {
-    const { error } = await supabase.from('nl_plaatsen').upsert({
-      naam: plaats.naam,
-      slug: slugify(plaats.naam),
-      gemeente: plaats.gemeente,
-      provincie: plaats.provincie,
-      latitude: plaats.lat,
-      longitude: plaats.lon,
-    }, { onConflict: 'slug' });
+    const gemeenteData = await gemeenteResponse.json();
+    console.log(`Fetched ${gemeenteData.features?.length || 0} gemeenten`);
 
-    if (error) console.error(`Error inserting ${plaats.naam}:`, error);
+    // Now fetch woonplaatsen (actual place names)
+    const woonplaatsenUrl = 'https://service.pdok.nl/lv/bag/wfs/v1_0?' +
+      'service=WFS&version=2.0.0&request=GetFeature&' +
+      'typeName=bag:woonplaats&' +
+      'outputFormat=application/json&srsName=EPSG:4326&' +
+      'count=10000';
+
+    console.log('Fetching woonplaatsen from PDOK BAG...');
+    const woonplaatsenResponse = await fetch(woonplaatsenUrl);
+    
+    if (!woonplaatsenResponse.ok) {
+      throw new Error(`PDOK woonplaatsen request failed: ${woonplaatsenResponse.status}`);
+    }
+
+    const woonplaatsenData = await woonplaatsenResponse.json();
+    const features = woonplaatsenData.features || [];
+    console.log(`Fetched ${features.length} woonplaatsen`);
+
+    let imported = 0;
+    let errors = 0;
+
+    // Process in batches to avoid timeout
+    const batchSize = 100;
+    
+    for (let i = 0; i < features.length; i += batchSize) {
+      const batch = features.slice(i, i + batchSize);
+      
+      const plaatsenToInsert = batch.map((feature: any) => {
+        const naam = feature.properties?.woonplaatsNaam || feature.properties?.naam;
+        if (!naam) return null;
+
+        // Get centroid from geometry
+        let lat = null;
+        let lon = null;
+        
+        if (feature.geometry) {
+          if (feature.geometry.type === 'Point') {
+            [lon, lat] = feature.geometry.coordinates;
+          } else if (feature.geometry.type === 'MultiPolygon' || feature.geometry.type === 'Polygon') {
+            // Calculate centroid for polygons
+            const coords = feature.geometry.type === 'MultiPolygon' 
+              ? feature.geometry.coordinates[0][0] 
+              : feature.geometry.coordinates[0];
+            
+            if (coords && coords.length > 0) {
+              let sumLon = 0, sumLat = 0;
+              for (const coord of coords) {
+                sumLon += coord[0];
+                sumLat += coord[1];
+              }
+              lon = sumLon / coords.length;
+              lat = sumLat / coords.length;
+            }
+          }
+        }
+
+        return {
+          naam: naam,
+          slug: slugify(naam),
+          gemeente: feature.properties?.gemeenteNaam || null,
+          provincie: feature.properties?.provincieNaam || null,
+          latitude: lat,
+          longitude: lon,
+        };
+      }).filter(Boolean);
+
+      if (plaatsenToInsert.length > 0) {
+        const { error } = await supabase
+          .from('nl_plaatsen')
+          .upsert(plaatsenToInsert, { 
+            onConflict: 'slug',
+            ignoreDuplicates: true 
+          });
+
+        if (error) {
+          console.error(`Batch error at ${i}:`, error);
+          errors++;
+        } else {
+          imported += plaatsenToInsert.length;
+        }
+      }
+
+      // Small delay to prevent rate limiting
+      if (i + batchSize < features.length) {
+        await new Promise(r => setTimeout(r, 50));
+      }
+    }
+
+    console.log(`Import complete: ${imported} places imported, ${errors} errors`);
+
+    return new Response(JSON.stringify({ 
+      success: true, 
+      imported,
+      total: features.length,
+      errors 
+    }), {
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
+
+  } catch (error) {
+    console.error('Import error:', error);
+    return new Response(JSON.stringify({ 
+      success: false, 
+      error: error instanceof Error ? error.message : 'Unknown error' 
+    }), {
+      status: 500,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
   }
-
-  console.log(`Imported ${plaatsen.length} places`);
-
-  return new Response(JSON.stringify({ success: true, count: plaatsen.length }), {
-    headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-  });
 });
