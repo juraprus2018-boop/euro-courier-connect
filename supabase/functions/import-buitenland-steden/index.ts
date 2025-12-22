@@ -91,12 +91,12 @@ Deno.serve(async (req) => {
     if (!countryName) {
       console.error(`Unknown country: ${landNaam}`);
       return new Response(
-        JSON.stringify({ 
-          success: false, 
+        JSON.stringify({
+          success: false,
           error: `Onbekend land: ${landNaam}. Voeg de landcode toe aan de mapping.`,
           supportedCountries: [...new Set(Object.keys(countryCodeMap))]
         }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
@@ -109,12 +109,12 @@ Deno.serve(async (req) => {
       'https://overpass-api.de/api/interpreter',
     ];
 
-    // Simplified query with shorter timeout
+    // More reliable query: geocode the country into an area, then fetch cities/towns inside it.
     const overpassQuery = `
-      [out:json][timeout:30];
-      area["name:en"="${countryName}"]["admin_level"="2"]->.country;
-      node["place"~"city|town"](area.country);
-      out;
+      [out:json][timeout:45];
+      {{geocodeArea:${countryName}}}->.country;
+      node["place"~"city|town"]["name"](area.country);
+      out body;
     `;
     
     console.log(`Fetching cities from Overpass API...`);
@@ -128,7 +128,7 @@ Deno.serve(async (req) => {
         console.log(`Trying Overpass server: ${serverUrl}`);
         
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 45000);
+        const timeoutId = setTimeout(() => controller.abort(), 90000);
         
         const response = await fetch(serverUrl, {
           method: 'POST',
@@ -158,11 +158,11 @@ Deno.serve(async (req) => {
     if (!overpassData || !overpassData.elements) {
       console.error('All Overpass servers failed:', lastError);
       return new Response(
-        JSON.stringify({ 
-          success: false, 
+        JSON.stringify({
+          success: false,
           error: `Kon steden niet ophalen. Alle servers zijn druk of niet bereikbaar. Probeer het over enkele minuten opnieuw.`
         }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 503 }
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
     
@@ -170,11 +170,12 @@ Deno.serve(async (req) => {
 
     if (overpassData.elements.length === 0) {
       return new Response(
-        JSON.stringify({ 
-          success: false, 
-          error: `Geen steden gevonden voor ${landNaam}. Probeer het later opnieuw.`
+        JSON.stringify({
+          success: false,
+          error: `Geen steden gevonden voor ${landNaam}. Probeer het later opnieuw.`,
+          hint: `Dit komt meestal door een drukke Overpass-server. Probeer opnieuw (eventueel een andere server) of probeer later.`
         }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 404 }
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
