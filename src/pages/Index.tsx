@@ -18,6 +18,7 @@ import { CountriesSection } from '@/components/public/CountriesSection';
 import { StatsSection } from '@/components/public/StatsSection';
 import { TestimonialsSection } from '@/components/public/TestimonialsSection';
 import { MainCTASection } from '@/components/public/MainCTASection';
+import { PriceCalculator } from '@/components/public/PriceCalculator';
 import { Loader2 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
@@ -94,18 +95,12 @@ const Index = () => {
               heroSubtitel={land.hero_subtitel}
             />
             
-            {/* Search Section */}
-            <section className="py-16 bg-muted/50">
-              <div className="container">
-                <div className="text-center mb-8">
-                  <h2 className="font-display text-3xl font-bold">Zoek uw route</h2>
-                  <p className="mt-2 text-muted-foreground">
-                    Vind direct de route en prijs voor uw zending naar {land.naam}
-                  </p>
-                </div>
-                <SearchRoutes />
-              </div>
-            </section>
+            {/* Price Calculator */}
+            <PriceCalculator 
+              landNaam={land.naam}
+              kmTarief={land.km_tarief}
+              restrictToCountry={land.iso_code || undefined}
+            />
 
             {/* Destinations in this country */}
             {bestemmingen && bestemmingen.length > 0 && (
@@ -206,6 +201,7 @@ const Index = () => {
       <main className="flex-1">
         <MainHeroSection />
         <StatsSection />
+        <PriceCalculator />
         <ServicesSection />
         <CountriesSection />
         <TestimonialsSection />

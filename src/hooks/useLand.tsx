@@ -8,6 +8,7 @@ interface Land {
   domein: string | null;
   km_tarief: number;
   actief: boolean;
+  iso_code?: string | null;
   primary_color?: string | null;
   secondary_color?: string | null;
   hero_titel?: string | null;
@@ -58,7 +59,7 @@ export function useLand() {
           // Parse FAQ from JSON if it exists
           const parsedLand: Land = {
             ...matchedLand,
-            faq: matchedLand.faq as Array<{ vraag: string; antwoord: string }> | null
+            faq: matchedLand.faq as unknown as Array<{ vraag: string; antwoord: string }> | null
           };
           setLand(parsedLand);
         }
