@@ -214,6 +214,12 @@ export type Database = {
           km_tarief: number
           naam: string
           slug: string
+          sync_routes_enabled: boolean
+          sync_routes_last_message: string | null
+          sync_routes_last_run: string | null
+          sync_routes_progress: number | null
+          sync_routes_status: string | null
+          sync_routes_total: number | null
           updated_at: string
         }
         Insert: {
@@ -224,6 +230,12 @@ export type Database = {
           km_tarief?: number
           naam: string
           slug: string
+          sync_routes_enabled?: boolean
+          sync_routes_last_message?: string | null
+          sync_routes_last_run?: string | null
+          sync_routes_progress?: number | null
+          sync_routes_status?: string | null
+          sync_routes_total?: number | null
           updated_at?: string
         }
         Update: {
@@ -234,6 +246,12 @@ export type Database = {
           km_tarief?: number
           naam?: string
           slug?: string
+          sync_routes_enabled?: boolean
+          sync_routes_last_message?: string | null
+          sync_routes_last_run?: string | null
+          sync_routes_progress?: number | null
+          sync_routes_status?: string | null
+          sync_routes_total?: number | null
           updated_at?: string
         }
         Relationships: []

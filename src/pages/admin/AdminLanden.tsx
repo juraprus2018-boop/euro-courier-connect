@@ -9,10 +9,13 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Progress } from '@/components/ui/progress';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { slugify } from '@/lib/slugify';
-import { Plus, Loader2, Pencil, Trash2, MapPin } from 'lucide-react';
+import { Plus, Loader2, Pencil, Trash2, MapPin, RefreshCw, Check, AlertCircle } from 'lucide-react';
+import { formatDistanceToNow } from 'date-fns';
+import { nl } from 'date-fns/locale';
 
 // Supported countries that can be imported
 const SUPPORTED_COUNTRIES = [
@@ -50,6 +53,12 @@ interface Land {
   km_tarief: number;
   actief: boolean;
   steden_count?: number;
+  sync_routes_enabled?: boolean;
+  sync_routes_status?: string;
+  sync_routes_progress?: number;
+  sync_routes_total?: number;
+  sync_routes_last_run?: string;
+  sync_routes_last_message?: string;
 }
 
 const AdminLanden = () => {
@@ -58,6 +67,7 @@ const AdminLanden = () => {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingLand, setEditingLand] = useState<Land | null>(null);
   const [importing, setImporting] = useState<string | null>(null);
+  const [syncing, setSyncing] = useState<string | null>(null);
   const [formData, setFormData] = useState({
     naam: '',
     domein: '',
@@ -65,6 +75,18 @@ const AdminLanden = () => {
     actief: true,
   });
   const { toast } = useToast();
+
+  // Poll for sync status updates
+  useEffect(() => {
+    const hasRunningSync = landen.some(l => l.sync_routes_status === 'running');
+    if (!hasRunningSync) return;
+
+    const interval = setInterval(() => {
+      fetchLanden();
+    }, 3000);
+
+    return () => clearInterval(interval);
+  }, [landen]);
 
   const fetchLanden = async () => {
     setLoading(true);
@@ -138,6 +160,54 @@ const AdminLanden = () => {
     } finally {
       setImporting(null);
     }
+  };
+
+  const syncRoutes = async (landId: string, landNaam: string) => {
+    setSyncing(landId);
+    toast({ title: `Routes synchroniseren voor ${landNaam}...` });
+
+    try {
+      const { data, error } = await supabase.functions.invoke('sync-routes-land', {
+        body: { landId }
+      });
+
+      if (error) throw error;
+
+      if (data.success) {
+        toast({ title: data.message });
+        fetchLanden();
+      } else {
+        toast({ title: data.error || 'Sync mislukt', variant: 'destructive' });
+      }
+    } catch (error) {
+      console.error('Sync error:', error);
+      toast({ title: 'Fout bij synchroniseren routes', variant: 'destructive' });
+    } finally {
+      setSyncing(null);
+    }
+  };
+
+  const toggleSyncEnabled = async (land: Land) => {
+    const newValue = !land.sync_routes_enabled;
+    
+    const { error } = await supabase
+      .from('landen')
+      .update({ sync_routes_enabled: newValue })
+      .eq('id', land.id);
+
+    if (error) {
+      toast({ title: 'Fout bij wijzigen sync instelling', variant: 'destructive' });
+      return;
+    }
+
+    toast({ title: newValue ? 'Route sync ingeschakeld' : 'Route sync uitgeschakeld' });
+    
+    // If enabled, start syncing immediately
+    if (newValue) {
+      syncRoutes(land.id, land.naam);
+    }
+    
+    fetchLanden();
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -319,52 +389,111 @@ const AdminLanden = () => {
                   <TableRow>
                     <TableHead>Naam</TableHead>
                     <TableHead>Steden</TableHead>
-                    <TableHead>Domein</TableHead>
+                    <TableHead>Sync Routes</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead className="w-[140px]">Acties</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {landen.map((land) => (
-                    <TableRow key={land.id}>
-                      <TableCell className="font-medium">{land.naam}</TableCell>
-                      <TableCell>
-                        <Badge variant="secondary" className="gap-1">
-                          <MapPin className="h-3 w-3" />
-                          {land.steden_count || 0}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>{land.domein || '-'}</TableCell>
-                      <TableCell>
-                        <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${land.actief ? 'bg-success/10 text-success' : 'bg-muted text-muted-foreground'}`}>
-                          {land.actief ? 'Actief' : 'Inactief'}
-                        </span>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-1">
-                          <Button 
-                            variant="ghost" 
-                            size="icon" 
-                            onClick={() => importSteden(land.id, land.naam)}
-                            disabled={importing === land.id}
-                            title="Steden importeren"
-                          >
-                            {importing === land.id ? (
-                              <Loader2 className="h-4 w-4 animate-spin" />
-                            ) : (
-                              <MapPin className="h-4 w-4" />
+                  {landen.map((land) => {
+                    const isRunning = land.sync_routes_status === 'running';
+                    const progress = land.sync_routes_total ? 
+                      Math.round((land.sync_routes_progress || 0) / land.sync_routes_total * 100) : 0;
+
+                    return (
+                      <TableRow key={land.id}>
+                        <TableCell className="font-medium">{land.naam}</TableCell>
+                        <TableCell>
+                          <Badge variant="secondary" className="gap-1">
+                            <MapPin className="h-3 w-3" />
+                            {land.steden_count || 0}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <div className="space-y-2 min-w-[200px]">
+                            <div className="flex items-center gap-2">
+                              <Switch
+                                checked={land.sync_routes_enabled || false}
+                                onCheckedChange={() => toggleSyncEnabled(land)}
+                                disabled={isRunning}
+                              />
+                              <span className="text-sm">
+                                {land.sync_routes_enabled ? 'Aan' : 'Uit'}
+                              </span>
+                              {isRunning && (
+                                <Loader2 className="h-4 w-4 animate-spin text-primary ml-auto" />
+                              )}
+                              {land.sync_routes_status === 'completed' && (
+                                <Check className="h-4 w-4 text-success ml-auto" />
+                              )}
+                            </div>
+                            
+                            {isRunning && (
+                              <div className="space-y-1">
+                                <Progress value={progress} className="h-2" />
+                                <p className="text-xs text-muted-foreground">
+                                  {land.sync_routes_progress || 0} / {land.sync_routes_total || 0}
+                                </p>
+                              </div>
                             )}
-                          </Button>
-                          <Button variant="ghost" size="icon" onClick={() => openEditDialog(land)}>
-                            <Pencil className="h-4 w-4" />
-                          </Button>
-                          <Button variant="ghost" size="icon" onClick={() => handleDelete(land.id)}>
-                            <Trash2 className="h-4 w-4 text-destructive" />
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))}
+                            
+                            {land.sync_routes_last_run && !isRunning && (
+                              <p className="text-xs text-muted-foreground">
+                                Laatste sync: {formatDistanceToNow(new Date(land.sync_routes_last_run), { addSuffix: true, locale: nl })}
+                              </p>
+                            )}
+                            
+                            {land.sync_routes_last_message && !isRunning && (
+                              <p className="text-xs text-muted-foreground truncate max-w-[180px]" title={land.sync_routes_last_message}>
+                                {land.sync_routes_last_message}
+                              </p>
+                            )}
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${land.actief ? 'bg-success/10 text-success' : 'bg-muted text-muted-foreground'}`}>
+                            {land.actief ? 'Actief' : 'Inactief'}
+                          </span>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-1">
+                            <Button 
+                              variant="ghost" 
+                              size="icon" 
+                              onClick={() => syncRoutes(land.id, land.naam)}
+                              disabled={isRunning || syncing === land.id}
+                              title="Routes synchroniseren"
+                            >
+                              {(isRunning || syncing === land.id) ? (
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                              ) : (
+                                <RefreshCw className="h-4 w-4" />
+                              )}
+                            </Button>
+                            <Button 
+                              variant="ghost" 
+                              size="icon" 
+                              onClick={() => importSteden(land.id, land.naam)}
+                              disabled={importing === land.id}
+                              title="Steden importeren"
+                            >
+                              {importing === land.id ? (
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                              ) : (
+                                <MapPin className="h-4 w-4" />
+                              )}
+                            </Button>
+                            <Button variant="ghost" size="icon" onClick={() => openEditDialog(land)}>
+                              <Pencil className="h-4 w-4" />
+                            </Button>
+                            <Button variant="ghost" size="icon" onClick={() => handleDelete(land.id)}>
+                              <Trash2 className="h-4 w-4 text-destructive" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
                   {landen.length === 0 && (
                     <TableRow>
                       <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
