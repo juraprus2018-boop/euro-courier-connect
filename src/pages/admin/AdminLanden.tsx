@@ -8,10 +8,39 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { slugify } from '@/lib/slugify';
 import { Plus, Loader2, Pencil, Trash2, MapPin } from 'lucide-react';
+
+// Supported countries that can be imported
+const SUPPORTED_COUNTRIES = [
+  { naam: 'België', domeinSuggestie: 'koerier-belgie.nl' },
+  { naam: 'Bulgarije', domeinSuggestie: 'koerier-bulgarije.nl' },
+  { naam: 'Denemarken', domeinSuggestie: 'koerier-denemarken.nl' },
+  { naam: 'Duitsland', domeinSuggestie: 'koerier-duitsland.nl' },
+  { naam: 'Finland', domeinSuggestie: 'koerier-finland.nl' },
+  { naam: 'Frankrijk', domeinSuggestie: 'koerier-frankrijk.nl' },
+  { naam: 'Griekenland', domeinSuggestie: 'koerier-griekenland.nl' },
+  { naam: 'Hongarije', domeinSuggestie: 'koerier-hongarije.nl' },
+  { naam: 'Ierland', domeinSuggestie: 'koerier-ierland.nl' },
+  { naam: 'Italië', domeinSuggestie: 'koerier-italie.nl' },
+  { naam: 'Kroatië', domeinSuggestie: 'koerier-kroatie.nl' },
+  { naam: 'Luxemburg', domeinSuggestie: 'koerier-luxemburg.nl' },
+  { naam: 'Noorwegen', domeinSuggestie: 'koerier-noorwegen.nl' },
+  { naam: 'Oostenrijk', domeinSuggestie: 'koerier-oostenrijk.nl' },
+  { naam: 'Polen', domeinSuggestie: 'koerier-polen.nl' },
+  { naam: 'Portugal', domeinSuggestie: 'koerier-portugal.nl' },
+  { naam: 'Roemenië', domeinSuggestie: 'koerier-roemenie.nl' },
+  { naam: 'Slovenië', domeinSuggestie: 'koerier-slovenie.nl' },
+  { naam: 'Slowakije', domeinSuggestie: 'koerier-slowakije.nl' },
+  { naam: 'Spanje', domeinSuggestie: 'koerier-spanje.nl' },
+  { naam: 'Tsjechië', domeinSuggestie: 'koerier-tsjechie.nl' },
+  { naam: 'Verenigd Koninkrijk', domeinSuggestie: 'koerier-engeland.nl' },
+  { naam: 'Zweden', domeinSuggestie: 'koerier-zweden.nl' },
+  { naam: 'Zwitserland', domeinSuggestie: 'koerier-zwitserland.nl' },
+];
 
 interface Land {
   id: string;
@@ -196,14 +225,40 @@ const AdminLanden = () => {
               </DialogHeader>
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="naam">Naam</Label>
-                  <Input
-                    id="naam"
-                    value={formData.naam}
-                    onChange={(e) => setFormData({ ...formData, naam: e.target.value })}
-                    placeholder="Frankrijk"
-                    required
-                  />
+                  <Label htmlFor="naam">Land</Label>
+                  {editingLand ? (
+                    <Input
+                      id="naam"
+                      value={formData.naam}
+                      disabled
+                      className="bg-muted"
+                    />
+                  ) : (
+                    <Select
+                      value={formData.naam}
+                      onValueChange={(value) => {
+                        const country = SUPPORTED_COUNTRIES.find(c => c.naam === value);
+                        setFormData({ 
+                          ...formData, 
+                          naam: value,
+                          domein: country?.domeinSuggestie || ''
+                        });
+                      }}
+                    >
+                      <SelectTrigger className="bg-background">
+                        <SelectValue placeholder="Selecteer een land" />
+                      </SelectTrigger>
+                      <SelectContent className="bg-background z-50">
+                        {SUPPORTED_COUNTRIES
+                          .filter(c => !landen.some(l => l.naam === c.naam))
+                          .map((country) => (
+                            <SelectItem key={country.naam} value={country.naam}>
+                              {country.naam}
+                            </SelectItem>
+                          ))}
+                      </SelectContent>
+                    </Select>
+                  )}
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="domein">Domein (optioneel)</Label>
