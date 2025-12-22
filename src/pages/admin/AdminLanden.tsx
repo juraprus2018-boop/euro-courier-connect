@@ -3,14 +3,15 @@ import { AdminLayout } from '@/components/admin/AdminLayout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Switch } from '@/components/ui/switch';
+import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { slugify } from '@/lib/slugify';
-import { Plus, Loader2, Pencil, Trash2 } from 'lucide-react';
+import { Plus, Loader2, Pencil, Trash2, MapPin } from 'lucide-react';
 
 interface Land {
   id: string;
@@ -19,6 +20,7 @@ interface Land {
   domein: string | null;
   km_tarief: number;
   actief: boolean;
+  steden_count?: number;
 }
 
 const AdminLanden = () => {
@@ -26,6 +28,7 @@ const AdminLanden = () => {
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingLand, setEditingLand] = useState<Land | null>(null);
+  const [importing, setImporting] = useState<string | null>(null);
   const [formData, setFormData] = useState({
     naam: '',
     domein: '',
@@ -35,6 +38,7 @@ const AdminLanden = () => {
   const { toast } = useToast();
 
   const fetchLanden = async () => {
+    // Fetch landen with count of steden
     const { data, error } = await supabase
       .from('landen')
       .select('*')
@@ -42,15 +46,57 @@ const AdminLanden = () => {
 
     if (error) {
       console.error('Error fetching landen:', error);
-    } else {
-      setLanden(data || []);
+      setLoading(false);
+      return;
     }
+
+    // Get steden count per land
+    const { data: stedenData } = await supabase
+      .from('buitenland_steden')
+      .select('land_id');
+
+    const stedenCountMap: Record<string, number> = {};
+    (stedenData || []).forEach((stad: { land_id: string }) => {
+      stedenCountMap[stad.land_id] = (stedenCountMap[stad.land_id] || 0) + 1;
+    });
+
+    const landenWithCount = (data || []).map(land => ({
+      ...land,
+      steden_count: stedenCountMap[land.id] || 0
+    }));
+
+    setLanden(landenWithCount);
     setLoading(false);
   };
 
   useEffect(() => {
     fetchLanden();
   }, []);
+
+  const importSteden = async (landId: string, landNaam: string) => {
+    setImporting(landId);
+    toast({ title: `Steden importeren voor ${landNaam}...` });
+
+    try {
+      const { data, error } = await supabase.functions.invoke('import-buitenland-steden', {
+        body: { landId, landNaam }
+      });
+
+      if (error) throw error;
+
+      if (data.success) {
+        toast({ title: data.message });
+        fetchLanden();
+      } else {
+        toast({ title: data.error || 'Import mislukt', variant: 'destructive' });
+      }
+    } catch (error) {
+      console.error('Import error:', error);
+      toast({ title: 'Fout bij importeren steden', variant: 'destructive' });
+    } finally {
+      setImporting(null);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -76,13 +122,23 @@ const AdminLanden = () => {
         fetchLanden();
       }
     } else {
-      const { error } = await supabase.from('landen').insert(landData);
+      // Insert new country and get the ID
+      const { data: newLand, error } = await supabase
+        .from('landen')
+        .insert(landData)
+        .select()
+        .single();
 
       if (error) {
         toast({ title: 'Fout bij toevoegen', variant: 'destructive' });
       } else {
-        toast({ title: 'Land toegevoegd' });
+        toast({ title: 'Land toegevoegd, steden worden geïmporteerd...' });
         fetchLanden();
+        
+        // Automatically import cities for the new country
+        if (newLand) {
+          importSteden(newLand.id, formData.naam);
+        }
       }
     }
 
@@ -194,25 +250,43 @@ const AdminLanden = () => {
                 <TableHeader>
                   <TableRow>
                     <TableHead>Naam</TableHead>
+                    <TableHead>Steden</TableHead>
                     <TableHead>Domein</TableHead>
-                    <TableHead>€/km</TableHead>
                     <TableHead>Status</TableHead>
-                    <TableHead className="w-[100px]">Acties</TableHead>
+                    <TableHead className="w-[140px]">Acties</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {landen.map((land) => (
                     <TableRow key={land.id}>
                       <TableCell className="font-medium">{land.naam}</TableCell>
+                      <TableCell>
+                        <Badge variant="secondary" className="gap-1">
+                          <MapPin className="h-3 w-3" />
+                          {land.steden_count || 0}
+                        </Badge>
+                      </TableCell>
                       <TableCell>{land.domein || '-'}</TableCell>
-                      <TableCell>€{Number(land.km_tarief).toFixed(2)}</TableCell>
                       <TableCell>
                         <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${land.actief ? 'bg-success/10 text-success' : 'bg-muted text-muted-foreground'}`}>
                           {land.actief ? 'Actief' : 'Inactief'}
                         </span>
                       </TableCell>
                       <TableCell>
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-1">
+                          <Button 
+                            variant="ghost" 
+                            size="icon" 
+                            onClick={() => importSteden(land.id, land.naam)}
+                            disabled={importing === land.id}
+                            title="Steden importeren"
+                          >
+                            {importing === land.id ? (
+                              <Loader2 className="h-4 w-4 animate-spin" />
+                            ) : (
+                              <MapPin className="h-4 w-4" />
+                            )}
+                          </Button>
                           <Button variant="ghost" size="icon" onClick={() => openEditDialog(land)}>
                             <Pencil className="h-4 w-4" />
                           </Button>

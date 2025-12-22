@@ -5,3 +5,6 @@ verify_jwt = false
 
 [functions.generate-routes]
 verify_jwt = false
+
+[functions.import-buitenland-steden]
+verify_jwt = false
