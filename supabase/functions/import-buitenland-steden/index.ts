@@ -102,41 +102,73 @@ Deno.serve(async (req) => {
 
     console.log(`Country name for Overpass: ${countryName}`);
 
-    // Use Overpass API (OpenStreetMap) - completely free, no limits for reasonable use
-    // Query for cities and towns with population data
+    // Multiple Overpass API servers for fallback
+    const overpassServers = [
+      'https://overpass.kumi.systems/api/interpreter',
+      'https://maps.mail.ru/osm/tools/overpass/api/interpreter',
+      'https://overpass-api.de/api/interpreter',
+    ];
+
+    // Simplified query with shorter timeout
     const overpassQuery = `
-      [out:json][timeout:60];
-      area["name"="${countryName}"]["admin_level"="2"]->.country;
-      (
-        node["place"="city"](area.country);
-        node["place"="town"](area.country);
-      );
-      out center;
+      [out:json][timeout:30];
+      area["name:en"="${countryName}"]["admin_level"="2"]->.country;
+      node["place"~"city|town"](area.country);
+      out;
     `;
-    
-    const overpassUrl = 'https://overpass-api.de/api/interpreter';
     
     console.log(`Fetching cities from Overpass API...`);
     
-    const response = await fetch(overpassUrl, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/x-www-form-urlencoded',
-      },
-      body: `data=${encodeURIComponent(overpassQuery)}`
-    });
-    
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error('Overpass API error:', errorText);
-      throw new Error(`Overpass API error: ${response.status}`);
+    let overpassData = null;
+    let lastError = null;
+
+    // Try each server until one works
+    for (const serverUrl of overpassServers) {
+      try {
+        console.log(`Trying Overpass server: ${serverUrl}`);
+        
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 45000);
+        
+        const response = await fetch(serverUrl, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+          },
+          body: `data=${encodeURIComponent(overpassQuery)}`,
+          signal: controller.signal
+        });
+        
+        clearTimeout(timeoutId);
+        
+        if (response.ok) {
+          overpassData = await response.json();
+          console.log(`Success with server: ${serverUrl}`);
+          break;
+        } else {
+          lastError = `${serverUrl} returned ${response.status}`;
+          console.log(`Server ${serverUrl} failed: ${response.status}`);
+        }
+      } catch (e) {
+        lastError = e instanceof Error ? e.message : 'Unknown error';
+        console.log(`Server ${serverUrl} error: ${lastError}`);
+      }
     }
 
-    const overpassData = await response.json();
+    if (!overpassData || !overpassData.elements) {
+      console.error('All Overpass servers failed:', lastError);
+      return new Response(
+        JSON.stringify({ 
+          success: false, 
+          error: `Kon steden niet ophalen. Alle servers zijn druk of niet bereikbaar. Probeer het over enkele minuten opnieuw.`
+        }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 503 }
+      );
+    }
     
     console.log(`Found ${overpassData.elements?.length || 0} places from Overpass`);
 
-    if (!overpassData.elements || overpassData.elements.length === 0) {
+    if (overpassData.elements.length === 0) {
       return new Response(
         JSON.stringify({ 
           success: false, 
