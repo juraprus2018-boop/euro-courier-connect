@@ -13,7 +13,8 @@ import {
   LogOut,
   Menu,
   X,
-  Settings
+  Settings,
+  Wifi
 } from 'lucide-react';
 import { useState } from 'react';
 import { cn } from '@/lib/utils';
@@ -25,6 +26,7 @@ interface AdminLayoutProps {
 const navItems = [
   { path: '/admin', label: 'Dashboard', icon: LayoutDashboard },
   { path: '/admin/landen', label: 'Landen', icon: Globe },
+  { path: '/admin/domeinen', label: 'Domein status', icon: Wifi },
   { path: '/admin/nl-plaatsen', label: 'NL Plaatsen', icon: MapPin },
   { path: '/admin/buitenland-steden', label: 'Buitenlandse Steden', icon: Building2 },
   { path: '/admin/routes', label: 'Routes', icon: Route },
