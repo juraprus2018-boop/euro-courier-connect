@@ -57,7 +57,10 @@ const BestemmingDetailPage = () => {
     );
   }
 
-  if (!stad) {
+  // On a country-specific site, only show destinations belonging to that country
+  const wrongLand = land && stad && stad.land_id !== land.id;
+
+  if (!stad || wrongLand) {
     return (
       <div className="min-h-screen flex flex-col">
         <Header landNaam={land?.naam} />

@@ -4,6 +4,7 @@ import { Header } from '@/components/public/Header';
 import { Footer } from '@/components/public/Footer';
 import { QuoteForm } from '@/components/public/QuoteForm';
 import { supabase } from '@/integrations/supabase/client';
+import { useLand } from '@/hooks/useLand';
 import { Loader2, MapPin, ArrowRight, Truck, Clock, Euro } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 
@@ -17,6 +18,7 @@ interface RouteDetail {
 
 const RouteDetailPage = () => {
   const { slug } = useParams();
+  const { land, loading: landLoading } = useLand();
   const [route, setRoute] = useState<RouteDetail | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -48,7 +50,7 @@ const RouteDetailPage = () => {
     fetchRoute();
   }, [slug]);
 
-  if (loading) {
+  if (loading || landLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -56,7 +58,10 @@ const RouteDetailPage = () => {
     );
   }
 
-  if (!route) {
+  // On a country-specific site, only show routes that go to that country
+  const wrongLand = land && route && route.buitenland_stad?.land?.id !== land.id;
+
+  if (!route || wrongLand) {
     return (
       <div className="min-h-screen flex flex-col">
         <Header />
