@@ -100,6 +100,21 @@ export function Header({ landNaam }: HeaderProps) {
             >
               Home
             </Link>
+            <div className="pt-2 border-t border-border">
+              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">Diensten</p>
+              <div className="flex flex-col gap-2 pl-2">
+                {services.map((s) => (
+                  <Link
+                    key={s.to}
+                    to={s.to}
+                    className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+                    onClick={() => setMobileMenuOpen(false)}
+                  >
+                    {s.label}
+                  </Link>
+                ))}
+              </div>
+            </div>
             <Link 
               to="/bestemmingen" 
               className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1"
