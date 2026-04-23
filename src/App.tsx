@@ -10,6 +10,9 @@ import BestemmingenPage from "./pages/BestemmingenPage";
 import BestemmingDetailPage from "./pages/BestemmingDetailPage";
 import QuotePage from "./pages/QuotePage";
 import ContactPage from "./pages/ContactPage";
+import FaqPage from "./pages/FaqPage";
+import AlgemeneVoorwaardenPage from "./pages/AlgemeneVoorwaardenPage";
+import PrivacybeleidPage from "./pages/PrivacybeleidPage";
 import AdminLogin from "./pages/admin/AdminLogin";
 import AdminDashboard from "./pages/admin/AdminDashboard";
 import AdminLanden from "./pages/admin/AdminLanden";
@@ -37,6 +40,9 @@ const App = () => (
           <Route path="/bestemming/:slug" element={<BestemmingDetailPage />} />
           <Route path="/offerte" element={<QuotePage />} />
           <Route path="/contact" element={<ContactPage />} />
+          <Route path="/faq" element={<FaqPage />} />
+          <Route path="/algemene-voorwaarden" element={<AlgemeneVoorwaardenPage />} />
+          <Route path="/privacybeleid" element={<PrivacybeleidPage />} />
           <Route path="/auth" element={<Navigate to="/admin/login" replace />} />
           <Route path="/admin/login" element={<AdminLogin />} />
           <Route path="/admin" element={<AdminDashboard />} />

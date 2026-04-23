@@ -44,9 +44,9 @@ export function Header({ landNaam }: HeaderProps) {
         </nav>
 
         <div className="flex items-center gap-4">
-          <a href="tel:+31612345678" className="hidden sm:flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors">
+          <a href="tel:+31857602999" className="hidden sm:flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors">
             <Phone className="h-4 w-4" />
-            <span>+31 6 1234 5678</span>
+            <span>085 7602 999</span>
           </a>
           <Button asChild className="hidden sm:inline-flex">
             <Link to="/offerte">Offerte aanvragen</Link>
