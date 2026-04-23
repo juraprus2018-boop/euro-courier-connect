@@ -1,7 +1,20 @@
 import { Link } from 'react-router-dom';
-import { Truck, Phone, MapPin, Menu, X } from 'lucide-react';
+import { Truck, Phone, MapPin, Menu, X, ChevronDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useState } from 'react';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+
+const services = [
+  { label: 'Internationaal transport', to: '/internationaal-transport' },
+  { label: 'Kunsttransport', to: '/kunsttransport' },
+  { label: 'Medisch transport', to: '/medisch-transport' },
+  { label: 'On-Board Koeriersdienst', to: '/on-board-koeriersdienst' },
+];
 
 interface HeaderProps {
   landNaam?: string;
@@ -31,6 +44,19 @@ export function Header({ landNaam }: HeaderProps) {
           <Link to="/" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">
             Home
           </Link>
+          <DropdownMenu>
+            <DropdownMenuTrigger className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1 outline-none">
+              Diensten
+              <ChevronDown className="h-4 w-4" />
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start" className="bg-popover">
+              {services.map((s) => (
+                <DropdownMenuItem key={s.to} asChild>
+                  <Link to={s.to}>{s.label}</Link>
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
           <Link to="/bestemmingen" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1">
             <MapPin className="h-4 w-4" />
             Bestemmingen
@@ -74,6 +100,21 @@ export function Header({ landNaam }: HeaderProps) {
             >
               Home
             </Link>
+            <div className="pt-2 border-t border-border">
+              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">Diensten</p>
+              <div className="flex flex-col gap-2 pl-2">
+                {services.map((s) => (
+                  <Link
+                    key={s.to}
+                    to={s.to}
+                    className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+                    onClick={() => setMobileMenuOpen(false)}
+                  >
+                    {s.label}
+                  </Link>
+                ))}
+              </div>
+            </div>
             <Link 
               to="/bestemmingen" 
               className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1"

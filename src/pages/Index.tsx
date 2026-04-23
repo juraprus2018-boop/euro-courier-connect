@@ -11,6 +11,7 @@ import { RouteCard } from '@/components/public/RouteCard';
 import { USPSection } from '@/components/public/USPSection';
 import { FAQSection } from '@/components/public/FAQSection';
 import { CTASection } from '@/components/public/CTASection';
+import { SpoedKoerierSection } from '@/components/public/SpoedKoerierSection';
 // Main site components
 import { MainHeroSection } from '@/components/public/MainHeroSection';
 import { ServicesSection } from '@/components/public/ServicesSection';
@@ -94,6 +95,8 @@ const Index = () => {
               heroTitel={land.hero_titel}
               heroSubtitel={land.hero_subtitel}
             />
+
+            <SpoedKoerierSection landNaam={land.naam} />
             
             {/* Price Calculator */}
             <PriceCalculator 
@@ -200,6 +203,7 @@ const Index = () => {
       
       <main className="flex-1">
         <MainHeroSection />
+        <SpoedKoerierSection />
         <StatsSection />
         <PriceCalculator />
         <ServicesSection />
