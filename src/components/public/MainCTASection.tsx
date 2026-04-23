@@ -49,9 +49,9 @@ export function MainCTASection() {
               </Link>
             </Button>
             <Button size="lg" className="bg-background text-foreground hover:bg-background/90 text-lg px-8 py-6" asChild>
-              <a href="tel:+31612345678">
+              <a href="tel:+31857602999">
                 <Phone className="mr-2 h-5 w-5" />
-                +31 6 1234 5678
+                085 7602 999
               </a>
             </Button>
           </div>

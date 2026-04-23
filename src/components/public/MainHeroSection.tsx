@@ -42,7 +42,7 @@ export function MainHeroSection() {
               </Link>
             </Button>
             <Button size="lg" className="bg-transparent border-2 border-primary-foreground/40 text-primary-foreground hover:bg-primary-foreground/10 text-lg px-8 py-6" asChild>
-              <a href="tel:+31612345678">
+              <a href="tel:+31857602999">
                 <Phone className="mr-2 h-5 w-5" />
                 Direct bellen
               </a>
@@ -51,9 +51,9 @@ export function MainHeroSection() {
           
           {/* Quick contact */}
           <div className="mt-10 flex flex-col sm:flex-row gap-6 text-background/70 animate-fade-in" style={{ animationDelay: '0.3s' }}>
-            <a href="tel:+31612345678" className="flex items-center gap-2 hover:text-accent transition-colors">
+            <a href="tel:+31857602999" className="flex items-center gap-2 hover:text-accent transition-colors">
               <Phone className="h-5 w-5" />
-              <span>+31 6 1234 5678</span>
+              <span>085 7602 999</span>
             </a>
             <a href="mailto:info@deeuropakoerier.nl" className="flex items-center gap-2 hover:text-accent transition-colors">
               <Mail className="h-5 w-5" />
