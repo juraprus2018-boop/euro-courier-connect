@@ -13,6 +13,10 @@ import ContactPage from "./pages/ContactPage";
 import FaqPage from "./pages/FaqPage";
 import AlgemeneVoorwaardenPage from "./pages/AlgemeneVoorwaardenPage";
 import PrivacybeleidPage from "./pages/PrivacybeleidPage";
+import InternationaalTransportPage from "./pages/services/InternationaalTransportPage";
+import KunsttransportPage from "./pages/services/KunsttransportPage";
+import MedischTransportPage from "./pages/services/MedischTransportPage";
+import OnBoardKoeriersdienstPage from "./pages/services/OnBoardKoeriersdienstPage";
 import AdminLogin from "./pages/admin/AdminLogin";
 import AdminDashboard from "./pages/admin/AdminDashboard";
 import AdminLanden from "./pages/admin/AdminLanden";
@@ -43,6 +47,10 @@ const App = () => (
           <Route path="/faq" element={<FaqPage />} />
           <Route path="/algemene-voorwaarden" element={<AlgemeneVoorwaardenPage />} />
           <Route path="/privacybeleid" element={<PrivacybeleidPage />} />
+          <Route path="/internationaal-transport" element={<InternationaalTransportPage />} />
+          <Route path="/kunsttransport" element={<KunsttransportPage />} />
+          <Route path="/medisch-transport" element={<MedischTransportPage />} />
+          <Route path="/on-board-koeriersdienst" element={<OnBoardKoeriersdienstPage />} />
           <Route path="/auth" element={<Navigate to="/admin/login" replace />} />
           <Route path="/admin/login" element={<AdminLogin />} />
           <Route path="/admin" element={<AdminDashboard />} />
