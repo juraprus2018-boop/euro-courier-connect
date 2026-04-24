@@ -10,14 +10,14 @@ interface HeroSectionProps {
 
 export function HeroSection({ landNaam, heroTitel, heroSubtitel }: HeroSectionProps) {
   const siteNaam = landNaam ? `De ${landNaam} Koerier` : 'De Europa Koerier';
-  
-  const title = heroTitel || (landNaam 
-    ? `Koerier naar ${landNaam}` 
-    : 'Betrouwbare Koeriersdiensten');
-  
+
+  const title = heroTitel || (landNaam
+    ? `Spoedkoerier naar ${landNaam}`
+    : 'Spoedkoerier door heel Europa');
+
   const subtitle = heroSubtitel || (landNaam
-    ? `Dagelijkse koeriersdienst van Nederland naar ${landNaam}. Snel, veilig en betaalbaar.`
-    : 'Professioneel transport van Nederland naar heel Europa. Dagelijks op pad voor uw zendingen.');
+    ? `Dagelijkse spoedkoeriersdienst van Nederland naar ${landNaam}. Direct van A naar B, 24/7 beschikbaar.`
+    : 'Professionele spoedkoerier van Nederland naar heel Europa. Dagelijks op pad voor uw zendingen.');
 
   return (
     <section className="relative overflow-hidden bg-gradient-dark py-20 lg:py-32">
