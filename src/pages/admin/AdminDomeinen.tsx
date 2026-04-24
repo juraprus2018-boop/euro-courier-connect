@@ -53,6 +53,7 @@ const AdminDomeinen = () => {
   const [loading, setLoading] = useState(true);
   const [checks, setChecks] = useState<Record<string, DomainCheck | { error: string }>>({});
   const [checkingId, setCheckingId] = useState<string | null>(null);
+  const [verwachtIp, setVerwachtIp] = useState<string>(DEFAULT_EXPECTED_IP);
 
   useEffect(() => {
     fetchLanden();
@@ -80,7 +81,7 @@ const AdminDomeinen = () => {
     }
     setCheckingId(land.id);
     const { data, error } = await supabase.functions.invoke('check-domain', {
-      body: { domein: land.domein },
+      body: { domein: land.domein, verwacht_ip: verwachtIp || DEFAULT_EXPECTED_IP },
     });
 
     if (error) {
