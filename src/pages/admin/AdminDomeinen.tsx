@@ -4,6 +4,8 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2, RefreshCw, CheckCircle2, XCircle, AlertTriangle, ExternalLink, Globe, ArrowRight } from 'lucide-react';
@@ -21,7 +23,7 @@ interface DomainCheck {
     host: string;
     ips: string[];
     cnames: string[];
-    pointsToLovable: boolean;
+    pointsToServer: boolean;
     redirectChain: string[];
     finalUrl: string;
     finalHost: string | null;
@@ -32,20 +34,18 @@ interface DomainCheck {
     host: string;
     ips: string[];
     cnames: string[];
-    pointsToLovable: boolean;
+    pointsToServer: boolean;
     redirectChain: string[];
     finalUrl: string;
     finalHost: string | null;
     finalStatus: number;
     error?: string;
   };
-  verification: {
-    txtRecords: string[];
-    hasLovableTxt: boolean;
-  };
   expectedIp: string;
   checkedAt: string;
 }
+
+const DEFAULT_EXPECTED_IP = '136.144.162.73';
 
 const AdminDomeinen = () => {
   const { toast } = useToast();
