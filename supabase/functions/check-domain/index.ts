@@ -5,7 +5,10 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-const LOVABLE_IP = '185.158.133.1';
+// Standaard verwacht IP (eigen server bij TransIP). Kan overschreven worden
+// via de instelling `verwacht_server_ip` in de tabel `instellingen`, of
+// via de body parameter `verwacht_ip`.
+const DEFAULT_EXPECTED_IP = '136.144.162.73';
 
 interface DnsAnswer {
   name: string;
