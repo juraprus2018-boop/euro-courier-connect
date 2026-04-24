@@ -5,6 +5,7 @@ import { Header } from '@/components/public/Header';
 import { Footer } from '@/components/public/Footer';
 import { SEOHead } from '@/components/SEOHead';
 import { SpoedKoerierSection } from '@/components/public/SpoedKoerierSection';
+import { PageBreadcrumb } from '@/components/public/PageBreadcrumb';
 import { Button } from '@/components/ui/button';
 import { CONTACT } from '@/lib/contact';
 
@@ -38,6 +39,13 @@ export function ServicePageLayout({
         {/* Hero */}
         <section className="relative bg-gradient-dark text-primary-foreground py-20">
           <div className="container">
+            <PageBreadcrumb
+              items={[
+                { label: 'Diensten' },
+                { label: title },
+              ]}
+              className="mb-6 text-primary-foreground/80 [&_a:hover]:text-primary-foreground [&_[aria-current]]:text-primary-foreground [&_svg]:text-primary-foreground/60"
+            />
             <div className="max-w-3xl">
               <span className="inline-block text-accent font-semibold uppercase tracking-widest text-sm">
                 {badge}

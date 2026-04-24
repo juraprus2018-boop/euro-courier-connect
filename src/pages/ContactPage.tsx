@@ -1,5 +1,6 @@
 import { Header } from '@/components/public/Header';
 import { Footer } from '@/components/public/Footer';
+import { PageBreadcrumb } from '@/components/public/PageBreadcrumb';
 import { Card, CardContent } from '@/components/ui/card';
 import { Phone, Mail, MapPin, Clock, Building2 } from 'lucide-react';
 import { CONTACT } from '@/lib/contact';
@@ -13,6 +14,7 @@ const ContactPage = () => {
       
       <main className="flex-1 py-12">
         <div className="container max-w-4xl">
+          <PageBreadcrumb items={[{ label: 'Contact' }]} className="mb-6" />
           <div className="text-center mb-12">
             <h1 className="font-display text-3xl font-bold">Contact</h1>
             <p className="mt-2 text-muted-foreground">
