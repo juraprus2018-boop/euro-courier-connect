@@ -23,9 +23,9 @@ export function MainHeroSection() {
           </div>
           
           <h1 className="font-display text-4xl sm:text-5xl lg:text-6xl xl:text-7xl font-bold tracking-tight text-background leading-tight animate-fade-in">
-            Uw betrouwbare
-            <span className="block text-accent">koerierspartner</span>
-            voor heel Europa
+            Spoedkoerier door
+            <span className="block text-accent">heel Europa</span>
+            uw betrouwbare partner
           </h1>
           
           <p className="mt-6 text-lg sm:text-xl text-background/80 max-w-2xl animate-fade-in" style={{ animationDelay: '0.1s' }}>

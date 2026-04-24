@@ -363,6 +363,77 @@ export type Database = {
           },
         ]
       }
+      prijsberekeningen: {
+        Row: {
+          aflever_adres: string | null
+          afstand_km: number | null
+          berekende_prijs: number | null
+          created_at: string
+          destination_lat: number | null
+          destination_lng: number | null
+          host: string | null
+          id: string
+          ip_adres: string | null
+          km_tarief: number | null
+          land_id: string | null
+          land_naam: string | null
+          ophaal_adres: string | null
+          pickup_lat: number | null
+          pickup_lng: number | null
+          referer: string | null
+          rijtijd_minuten: number | null
+          user_agent: string | null
+        }
+        Insert: {
+          aflever_adres?: string | null
+          afstand_km?: number | null
+          berekende_prijs?: number | null
+          created_at?: string
+          destination_lat?: number | null
+          destination_lng?: number | null
+          host?: string | null
+          id?: string
+          ip_adres?: string | null
+          km_tarief?: number | null
+          land_id?: string | null
+          land_naam?: string | null
+          ophaal_adres?: string | null
+          pickup_lat?: number | null
+          pickup_lng?: number | null
+          referer?: string | null
+          rijtijd_minuten?: number | null
+          user_agent?: string | null
+        }
+        Update: {
+          aflever_adres?: string | null
+          afstand_km?: number | null
+          berekende_prijs?: number | null
+          created_at?: string
+          destination_lat?: number | null
+          destination_lng?: number | null
+          host?: string | null
+          id?: string
+          ip_adres?: string | null
+          km_tarief?: number | null
+          land_id?: string | null
+          land_naam?: string | null
+          ophaal_adres?: string | null
+          pickup_lat?: number | null
+          pickup_lng?: number | null
+          referer?: string | null
+          rijtijd_minuten?: number | null
+          user_agent?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "prijsberekeningen_land_id_fkey"
+            columns: ["land_id"]
+            isOneToOne: false
+            referencedRelation: "landen"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       routes: {
         Row: {
           afstand_km: number
