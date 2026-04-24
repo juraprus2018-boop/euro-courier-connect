@@ -4,6 +4,7 @@ import { Header } from '@/components/public/Header';
 import { Footer } from '@/components/public/Footer';
 import { RouteCard } from '@/components/public/RouteCard';
 import { SearchRoutes } from '@/components/public/SearchRoutes';
+import { PageBreadcrumb } from '@/components/public/PageBreadcrumb';
 import { supabase } from '@/integrations/supabase/client';
 import { useLand } from '@/hooks/useLand';
 import { Loader2 } from 'lucide-react';
@@ -104,6 +105,7 @@ const RoutesPage = () => {
       
       <main className="flex-1 py-12">
         <div className="container">
+          <PageBreadcrumb items={[{ label: 'Routes' }]} className="mb-6" />
           <h1 className="font-display text-3xl font-bold mb-2">
             {land ? `Routes naar ${land.naam}` : 'Beschikbare routes'}
           </h1>

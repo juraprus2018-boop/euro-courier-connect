@@ -1,5 +1,6 @@
 import { Header } from '@/components/public/Header';
 import { Footer } from '@/components/public/Footer';
+import { PageBreadcrumb } from '@/components/public/PageBreadcrumb';
 import { SEOHead } from '@/components/SEOHead';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { CONTACT } from '@/lib/contact';
@@ -56,6 +57,7 @@ const FaqPage = () => {
 
       <main className="flex-1 py-12">
         <div className="container max-w-3xl">
+          <PageBreadcrumb items={[{ label: 'Veelgestelde vragen' }]} className="mb-6" />
           <div className="text-center mb-10">
             <h1 className="font-display text-3xl font-bold">Veelgestelde vragen</h1>
             <p className="mt-2 text-muted-foreground">Alles wat u wilt weten over De Europa Koerier</p>

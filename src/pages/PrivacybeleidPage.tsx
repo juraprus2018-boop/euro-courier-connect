@@ -1,5 +1,6 @@
 import { Header } from '@/components/public/Header';
 import { Footer } from '@/components/public/Footer';
+import { PageBreadcrumb } from '@/components/public/PageBreadcrumb';
 import { SEOHead } from '@/components/SEOHead';
 import { CONTACT } from '@/lib/contact';
 
@@ -62,6 +63,7 @@ const PrivacybeleidPage = () => {
 
       <main className="flex-1 py-12">
         <div className="container max-w-3xl">
+          <PageBreadcrumb items={[{ label: 'Privacybeleid' }]} className="mb-6" />
           <h1 className="font-display text-3xl font-bold mb-8">Privacybeleid</h1>
 
           <ol className="space-y-6 list-decimal pl-6">

@@ -3,6 +3,7 @@ import { useParams } from 'react-router-dom';
 import { Header } from '@/components/public/Header';
 import { Footer } from '@/components/public/Footer';
 import { QuoteForm } from '@/components/public/QuoteForm';
+import { PageBreadcrumb } from '@/components/public/PageBreadcrumb';
 import { supabase } from '@/integrations/supabase/client';
 import { useLand } from '@/hooks/useLand';
 import { Loader2, MapPin, ArrowRight, Truck, Clock, Euro } from 'lucide-react';
@@ -88,6 +89,13 @@ const RouteDetailPage = () => {
         {/* Hero */}
         <section className="bg-gradient-dark py-16 text-primary-foreground">
           <div className="container">
+            <PageBreadcrumb
+              items={[
+                { label: 'Routes', to: '/routes' },
+                { label: `${nlPlaats} → ${buitenlandStad}` },
+              ]}
+              className="mb-6 text-primary-foreground/80 [&_a:hover]:text-primary-foreground [&_[aria-current]]:text-primary-foreground"
+            />
             <div className="flex items-center gap-4 text-lg mb-4">
               <div className="flex items-center gap-2">
                 <MapPin className="h-5 w-5" />

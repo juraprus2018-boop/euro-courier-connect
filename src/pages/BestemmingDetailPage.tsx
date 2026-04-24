@@ -4,6 +4,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useLand } from '@/hooks/useLand';
 import { Header } from '@/components/public/Header';
 import { Footer } from '@/components/public/Footer';
+import { PageBreadcrumb } from '@/components/public/PageBreadcrumb';
 import { Loader2, MapPin, ArrowRight, Truck } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
@@ -85,14 +86,13 @@ const BestemmingDetailPage = () => {
       
       <main className="flex-1 py-12">
         <div className="container">
-          {/* Breadcrumb */}
-          <nav className="mb-6 text-sm text-muted-foreground">
-            <Link to="/" className="hover:text-foreground">Home</Link>
-            <span className="mx-2">/</span>
-            <Link to="/bestemmingen" className="hover:text-foreground">Bestemmingen</Link>
-            <span className="mx-2">/</span>
-            <span className="text-foreground">{stad.naam}</span>
-          </nav>
+          <PageBreadcrumb
+            items={[
+              { label: 'Bestemmingen', to: '/bestemmingen' },
+              { label: stad.naam },
+            ]}
+            className="mb-6"
+          />
 
           {/* Header */}
           <div className="mb-8">

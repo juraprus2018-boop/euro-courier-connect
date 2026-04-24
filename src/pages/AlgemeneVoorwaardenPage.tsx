@@ -1,5 +1,6 @@
 import { Header } from '@/components/public/Header';
 import { Footer } from '@/components/public/Footer';
+import { PageBreadcrumb } from '@/components/public/PageBreadcrumb';
 import { SEOHead } from '@/components/SEOHead';
 import { FileText } from 'lucide-react';
 
@@ -14,6 +15,7 @@ const AlgemeneVoorwaardenPage = () => {
 
       <main className="flex-1 py-12">
         <div className="container max-w-3xl">
+          <PageBreadcrumb items={[{ label: 'Algemene voorwaarden' }]} className="mb-6" />
           <h1 className="font-display text-3xl font-bold mb-8">Algemene voorwaarden</h1>
 
           <div className="prose prose-neutral max-w-none space-y-6 text-foreground">
