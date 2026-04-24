@@ -44,7 +44,7 @@ export function HeroSection({ landNaam, heroTitel, heroSubtitel }: HeroSectionPr
                 <ArrowRight className="ml-2 h-4 w-4" />
               </Link>
             </Button>
-            <Button size="lg" variant="outline" className="bg-transparent border-2 border-primary-foreground/40 text-primary-foreground hover:bg-primary-foreground hover:text-primary" asChild>
+            <Button size="lg" variant="outline-light" asChild>
               <Link to="/bestemmingen">Bekijk bestemmingen</Link>
             </Button>
           </div>
