@@ -297,11 +297,31 @@ const AdminDomeinen = () => {
           <AlertTriangle className="h-4 w-4" />
           <AlertTitle>Wat wordt gecontroleerd?</AlertTitle>
           <AlertDescription className="space-y-1 mt-2 text-sm">
-            <p>• <strong>A-record</strong> apex en www moeten wijzen naar <code className="text-xs">185.158.133.1</code></p>
-            <p>• <strong>TXT-record</strong> op <code className="text-xs">_lovable.domein</code> voor verificatie</p>
-            <p>• <strong>Redirect-keten</strong> – waar bezoekers daadwerkelijk uitkomen</p>
+            <p>• <strong>A-record</strong> apex en www moeten wijzen naar je eigen server-IP (standaard <code className="text-xs">{DEFAULT_EXPECTED_IP}</code>)</p>
+            <p>• <strong>Redirect-keten</strong> – waar bezoekers daadwerkelijk uitkomen. Komt het uit op een ánder domein, dan stuurt de webserver (Apache/Nginx vhost) op je eigen server door — controleer de vhost-config voor dit domein.</p>
           </AlertDescription>
         </Alert>
+
+        <Card>
+          <CardContent className="pt-6">
+            <Label htmlFor="verwacht-ip" className="text-sm font-medium">Verwacht server-IP</Label>
+            <div className="flex gap-2 mt-2 max-w-md">
+              <Input
+                id="verwacht-ip"
+                value={verwachtIp}
+                onChange={(e) => setVerwachtIp(e.target.value)}
+                placeholder={DEFAULT_EXPECTED_IP}
+                className="font-mono"
+              />
+              <Button variant="outline" type="button" onClick={() => setVerwachtIp(DEFAULT_EXPECTED_IP)}>
+                Reset
+              </Button>
+            </div>
+            <p className="text-xs text-muted-foreground mt-2">
+              Het IP waar je domeinen naartoe horen te wijzen (jouw server bij TransIP/ServeRip).
+            </p>
+          </CardContent>
+        </Card>
 
         <div className="space-y-4">
           {landen.filter(l => l.domein).map(land => (
