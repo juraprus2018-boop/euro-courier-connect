@@ -29,13 +29,16 @@ export function Header({ landNaam }: HeaderProps) {
   return (
     <header className="sticky top-0 z-50 w-full border-b border-border bg-card/95 backdrop-blur supports-[backdrop-filter]:bg-card/60">
       <div className="container flex h-16 items-center justify-between">
-        <Link to="/" className="flex items-center gap-2">
-          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-primary">
-            <Truck className="h-5 w-5 text-primary-foreground" />
+        <Link to="/" className="flex items-center gap-3">
+          <div className="flex h-11 w-11 items-center justify-center rounded-lg bg-gradient-primary shadow-md">
+            <Truck className="h-6 w-6 text-primary-foreground" />
           </div>
-          <div className="flex flex-col">
-            <span className="font-display text-lg font-bold text-foreground">
+          <div className="flex flex-col leading-tight">
+            <span className="font-display text-base sm:text-lg font-bold text-foreground">
               {siteNaam}
+            </span>
+            <span className="text-[11px] sm:text-xs font-medium text-accent uppercase tracking-wide">
+              {landNaam ? `Spoedkoerier naar ${landNaam}` : 'Spoedkoerier door heel Europa'}
             </span>
           </div>
         </Link>
