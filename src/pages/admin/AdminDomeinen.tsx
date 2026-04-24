@@ -4,6 +4,8 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2, RefreshCw, CheckCircle2, XCircle, AlertTriangle, ExternalLink, Globe, ArrowRight } from 'lucide-react';
@@ -21,7 +23,7 @@ interface DomainCheck {
     host: string;
     ips: string[];
     cnames: string[];
-    pointsToLovable: boolean;
+    pointsToServer: boolean;
     redirectChain: string[];
     finalUrl: string;
     finalHost: string | null;
@@ -32,20 +34,18 @@ interface DomainCheck {
     host: string;
     ips: string[];
     cnames: string[];
-    pointsToLovable: boolean;
+    pointsToServer: boolean;
     redirectChain: string[];
     finalUrl: string;
     finalHost: string | null;
     finalStatus: number;
     error?: string;
   };
-  verification: {
-    txtRecords: string[];
-    hasLovableTxt: boolean;
-  };
   expectedIp: string;
   checkedAt: string;
 }
+
+const DEFAULT_EXPECTED_IP = '136.144.162.73';
 
 const AdminDomeinen = () => {
   const { toast } = useToast();
@@ -53,6 +53,7 @@ const AdminDomeinen = () => {
   const [loading, setLoading] = useState(true);
   const [checks, setChecks] = useState<Record<string, DomainCheck | { error: string }>>({});
   const [checkingId, setCheckingId] = useState<string | null>(null);
+  const [verwachtIp, setVerwachtIp] = useState<string>(DEFAULT_EXPECTED_IP);
 
   useEffect(() => {
     fetchLanden();
@@ -80,7 +81,7 @@ const AdminDomeinen = () => {
     }
     setCheckingId(land.id);
     const { data, error } = await supabase.functions.invoke('check-domain', {
-      body: { domein: land.domein },
+      body: { domein: land.domein, verwacht_ip: verwachtIp || DEFAULT_EXPECTED_IP },
     });
 
     if (error) {
@@ -168,7 +169,7 @@ const AdminDomeinen = () => {
           <div className="p-3 rounded-lg border border-border">
             <div className="flex items-center justify-between mb-2">
               <span className="text-xs font-medium text-muted-foreground">A-RECORD APEX ({result.apex.host})</span>
-              <StatusBadge ok={result.apex.pointsToLovable} label={result.apex.pointsToLovable ? 'OK' : 'Verkeerd'} />
+              <StatusBadge ok={result.apex.pointsToServer} label={result.apex.pointsToServer ? 'OK' : 'Verkeerd'} />
             </div>
             {result.apex.ips.length > 0 ? (
               <div className="space-y-1">
@@ -195,7 +196,7 @@ const AdminDomeinen = () => {
           <div className="p-3 rounded-lg border border-border">
             <div className="flex items-center justify-between mb-2">
               <span className="text-xs font-medium text-muted-foreground">A-RECORD WWW ({result.www.host})</span>
-              <StatusBadge ok={result.www.pointsToLovable} label={result.www.pointsToLovable ? 'OK' : 'Verkeerd'} />
+              <StatusBadge ok={result.www.pointsToServer} label={result.www.pointsToServer ? 'OK' : 'Verkeerd'} />
             </div>
             {result.www.ips.length > 0 ? (
               <div className="space-y-1">
@@ -217,23 +218,6 @@ const AdminDomeinen = () => {
               <p className="text-xs text-muted-foreground mt-2">CNAME: {result.www.cnames.join(', ')}</p>
             )}
           </div>
-        </div>
-
-        {/* TXT verification */}
-        <div className="p-3 rounded-lg border border-border">
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-xs font-medium text-muted-foreground">TXT VERIFICATIE (_lovable.{result.domein})</span>
-            <StatusBadge ok={result.verification.hasLovableTxt} label={result.verification.hasLovableTxt ? 'Aanwezig' : 'Ontbreekt'} />
-          </div>
-          {result.verification.txtRecords.length > 0 ? (
-            <div className="space-y-1">
-              {result.verification.txtRecords.map((t, i) => (
-                <p key={i} className="text-xs font-mono break-all">{t}</p>
-              ))}
-            </div>
-          ) : (
-            <p className="text-sm text-muted-foreground">Geen TXT record gevonden op _lovable subdomein</p>
-          )}
         </div>
 
         {/* Redirect chains */}
@@ -313,11 +297,31 @@ const AdminDomeinen = () => {
           <AlertTriangle className="h-4 w-4" />
           <AlertTitle>Wat wordt gecontroleerd?</AlertTitle>
           <AlertDescription className="space-y-1 mt-2 text-sm">
-            <p>• <strong>A-record</strong> apex en www moeten wijzen naar <code className="text-xs">185.158.133.1</code></p>
-            <p>• <strong>TXT-record</strong> op <code className="text-xs">_lovable.domein</code> voor verificatie</p>
-            <p>• <strong>Redirect-keten</strong> – waar bezoekers daadwerkelijk uitkomen</p>
+            <p>• <strong>A-record</strong> apex en www moeten wijzen naar je eigen server-IP (standaard <code className="text-xs">{DEFAULT_EXPECTED_IP}</code>)</p>
+            <p>• <strong>Redirect-keten</strong> – waar bezoekers daadwerkelijk uitkomen. Komt het uit op een ánder domein, dan stuurt de webserver (Apache/Nginx vhost) op je eigen server door — controleer de vhost-config voor dit domein.</p>
           </AlertDescription>
         </Alert>
+
+        <Card>
+          <CardContent className="pt-6">
+            <Label htmlFor="verwacht-ip" className="text-sm font-medium">Verwacht server-IP</Label>
+            <div className="flex gap-2 mt-2 max-w-md">
+              <Input
+                id="verwacht-ip"
+                value={verwachtIp}
+                onChange={(e) => setVerwachtIp(e.target.value)}
+                placeholder={DEFAULT_EXPECTED_IP}
+                className="font-mono"
+              />
+              <Button variant="outline" type="button" onClick={() => setVerwachtIp(DEFAULT_EXPECTED_IP)}>
+                Reset
+              </Button>
+            </div>
+            <p className="text-xs text-muted-foreground mt-2">
+              Het IP waar je domeinen naartoe horen te wijzen (jouw server bij TransIP/ServeRip).
+            </p>
+          </CardContent>
+        </Card>
 
         <div className="space-y-4">
           {landen.filter(l => l.domein).map(land => (

@@ -5,7 +5,10 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-const LOVABLE_IP = '185.158.133.1';
+// Standaard verwacht IP (eigen server bij TransIP). Kan overschreven worden
+// via de instelling `verwacht_server_ip` in de tabel `instellingen`, of
+// via de body parameter `verwacht_ip`.
+const DEFAULT_EXPECTED_IP = '136.144.162.73';
 
 interface DnsAnswer {
   name: string;
@@ -57,7 +60,7 @@ serve(async (req) => {
   }
 
   try {
-    const { domein } = await req.json();
+    const { domein, verwacht_ip } = await req.json();
     if (!domein) {
       return new Response(JSON.stringify({ error: 'Geen domein opgegeven' }), {
         status: 400,
@@ -69,13 +72,16 @@ serve(async (req) => {
     const wwwDomain = cleanDomain.startsWith('www.') ? cleanDomain : `www.${cleanDomain}`;
     const apexDomain = cleanDomain.startsWith('www.') ? cleanDomain.slice(4) : cleanDomain;
 
+    const expectedIp = (typeof verwacht_ip === 'string' && verwacht_ip.trim())
+      ? verwacht_ip.trim()
+      : DEFAULT_EXPECTED_IP;
+
     // Run all checks in parallel
-    const [apexA, wwwA, apexCname, wwwCname, txtRecords, apexTrace, wwwTrace] = await Promise.all([
+    const [apexA, wwwA, apexCname, wwwCname, apexTrace, wwwTrace] = await Promise.all([
       dnsLookup(apexDomain, 'A').catch(() => null),
       dnsLookup(wwwDomain, 'A').catch(() => null),
       dnsLookup(apexDomain, 'CNAME').catch(() => null),
       dnsLookup(wwwDomain, 'CNAME').catch(() => null),
-      dnsLookup(`_lovable.${apexDomain}`, 'TXT').catch(() => null),
       traceRedirects(`http://${apexDomain}`).catch((e) => ({ chain: [`http://${apexDomain}`], finalUrl: '', finalStatus: 0, error: e.message })),
       traceRedirects(`http://${wwwDomain}`).catch((e) => ({ chain: [`http://${wwwDomain}`], finalUrl: '', finalStatus: 0, error: e.message })),
     ]);
@@ -84,11 +90,9 @@ serve(async (req) => {
     const wwwIps = wwwA?.Answer?.filter(a => a.type === 1).map(a => a.data) ?? [];
     const apexCnames = apexCname?.Answer?.filter(a => a.type === 5).map(a => a.data) ?? [];
     const wwwCnames = wwwCname?.Answer?.filter(a => a.type === 5).map(a => a.data) ?? [];
-    const txt = txtRecords?.Answer?.filter(a => a.type === 16).map(a => a.data.replace(/^"|"$/g, '')) ?? [];
 
-    const apexPointsToLovable = apexIps.includes(LOVABLE_IP);
-    const wwwPointsToLovable = wwwIps.includes(LOVABLE_IP);
-    const hasLovableTxt = txt.some(t => t.includes('lovable_verify') || t.includes('lovable'));
+    const apexPointsToServer = apexIps.includes(expectedIp);
+    const wwwPointsToServer = wwwIps.includes(expectedIp);
 
     // Determine effective destination
     const finalApexHost = apexTrace.finalUrl ? new URL(apexTrace.finalUrl).hostname : null;
@@ -100,7 +104,7 @@ serve(async (req) => {
         host: apexDomain,
         ips: apexIps,
         cnames: apexCnames,
-        pointsToLovable: apexPointsToLovable,
+        pointsToServer: apexPointsToServer,
         redirectChain: apexTrace.chain,
         finalUrl: apexTrace.finalUrl,
         finalHost: finalApexHost,
@@ -111,18 +115,14 @@ serve(async (req) => {
         host: wwwDomain,
         ips: wwwIps,
         cnames: wwwCnames,
-        pointsToLovable: wwwPointsToLovable,
+        pointsToServer: wwwPointsToServer,
         redirectChain: wwwTrace.chain,
         finalUrl: wwwTrace.finalUrl,
         finalHost: finalWwwHost,
         finalStatus: wwwTrace.finalStatus,
         error: wwwTrace.error,
       },
-      verification: {
-        txtRecords: txt,
-        hasLovableTxt,
-      },
-      expectedIp: LOVABLE_IP,
+      expectedIp,
       checkedAt: new Date().toISOString(),
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
