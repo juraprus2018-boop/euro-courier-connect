@@ -5,6 +5,7 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Loader2, MapPin, Navigation, Euro, Truck, ArrowRight, Clock } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { supabase } from '@/integrations/supabase/client';
 
 const RouteMap = lazy(() => import('./RouteMap'));
 
@@ -108,6 +109,30 @@ export function PriceCalculator({ landNaam, kmTarief = 0.85, restrictToCountry }
       setRouteCoords(routeData.coordinates);
       setDistance(routeData.distance);
       setDuration(routeData.duration);
+
+      // Log de berekening (fire-and-forget, faalt stilletjes)
+      const berekendePrijs = Math.round(routeData.distance * kmTarief);
+      try {
+        await supabase.functions.invoke('log-prijsberekening', {
+          body: {
+            host: window.location.hostname,
+            land_naam: landNaam ?? null,
+            ophaal_adres: pickupAddress,
+            aflever_adres: destinationAddress,
+            pickup_lat: pickup.lat,
+            pickup_lng: pickup.lng,
+            destination_lat: destination.lat,
+            destination_lng: destination.lng,
+            afstand_km: routeData.distance,
+            rijtijd_minuten: routeData.duration,
+            km_tarief: kmTarief,
+            berekende_prijs: berekendePrijs,
+            referer: document.referrer || null,
+          },
+        });
+      } catch (logErr) {
+        console.warn('Logging failed:', logErr);
+      }
     } catch (err) {
       setError('Er is een fout opgetreden. Probeer het opnieuw.');
     }
