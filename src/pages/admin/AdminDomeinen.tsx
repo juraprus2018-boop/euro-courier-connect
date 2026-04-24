@@ -169,7 +169,7 @@ const AdminDomeinen = () => {
           <div className="p-3 rounded-lg border border-border">
             <div className="flex items-center justify-between mb-2">
               <span className="text-xs font-medium text-muted-foreground">A-RECORD APEX ({result.apex.host})</span>
-              <StatusBadge ok={result.apex.pointsToLovable} label={result.apex.pointsToLovable ? 'OK' : 'Verkeerd'} />
+              <StatusBadge ok={result.apex.pointsToServer} label={result.apex.pointsToServer ? 'OK' : 'Verkeerd'} />
             </div>
             {result.apex.ips.length > 0 ? (
               <div className="space-y-1">
@@ -196,7 +196,7 @@ const AdminDomeinen = () => {
           <div className="p-3 rounded-lg border border-border">
             <div className="flex items-center justify-between mb-2">
               <span className="text-xs font-medium text-muted-foreground">A-RECORD WWW ({result.www.host})</span>
-              <StatusBadge ok={result.www.pointsToLovable} label={result.www.pointsToLovable ? 'OK' : 'Verkeerd'} />
+              <StatusBadge ok={result.www.pointsToServer} label={result.www.pointsToServer ? 'OK' : 'Verkeerd'} />
             </div>
             {result.www.ips.length > 0 ? (
               <div className="space-y-1">
@@ -218,23 +218,6 @@ const AdminDomeinen = () => {
               <p className="text-xs text-muted-foreground mt-2">CNAME: {result.www.cnames.join(', ')}</p>
             )}
           </div>
-        </div>
-
-        {/* TXT verification */}
-        <div className="p-3 rounded-lg border border-border">
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-xs font-medium text-muted-foreground">TXT VERIFICATIE (_lovable.{result.domein})</span>
-            <StatusBadge ok={result.verification.hasLovableTxt} label={result.verification.hasLovableTxt ? 'Aanwezig' : 'Ontbreekt'} />
-          </div>
-          {result.verification.txtRecords.length > 0 ? (
-            <div className="space-y-1">
-              {result.verification.txtRecords.map((t, i) => (
-                <p key={i} className="text-xs font-mono break-all">{t}</p>
-              ))}
-            </div>
-          ) : (
-            <p className="text-sm text-muted-foreground">Geen TXT record gevonden op _lovable subdomein</p>
-          )}
         </div>
 
         {/* Redirect chains */}
